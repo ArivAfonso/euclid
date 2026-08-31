@@ -1,0 +1,25 @@
+{
+  "name": "@euclid/server",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "chanfana": "^2.6.3",
+    "hono": "^4.6.20",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@euclid/typescript-config": "*",
+    "@euclid/eslint-config": "*",
+    "@types/node": "22.13.0",
+    "@types/service-worker-mock": "^2.0.4",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.24.4"
+  }
+}

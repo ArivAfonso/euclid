@@ -1,0 +1,13 @@
+{
+  "name": "@euclid/typescript-config",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.js",
+  "files": [
+    "base.json",
+    "nextjs.json",
+    "react-library.json",
+    "vite.json",
+    "electron.json"
+  ]
+}

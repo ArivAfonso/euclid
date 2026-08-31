@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2021",
+    "lib": ["ES2021"],
+    "outDir": "dist-electron",
+    "skipLibCheck": true
+  },
+  "include": [
+    "electron/**/*"
+  ]
+}

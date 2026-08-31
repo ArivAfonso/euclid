@@ -1,0 +1,34 @@
+{
+  "name": "euclid-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@9.6.5",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:desktop": "turbo run dev --filter=@euclid/desktop",
+    "dev:server": "turbo run dev --filter=@euclid/server",
+    "dev:with-server": "turbo run dev --filter=@euclid/server --filter=@euclid/desktop",
+    "build": "turbo run build",
+    "build:desktop": "turbo run build --filter=@euclid/desktop",
+    "build:server": "turbo run build --filter=@euclid/server",
+    "deploy": "turbo run deploy",
+    "deploy:server": "turbo run deploy --filter=@euclid/server",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.2.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "volta": {
+    "node": "18.19.0"
+  }
+}

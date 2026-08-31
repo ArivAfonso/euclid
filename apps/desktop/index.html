@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%- title %></title>
+    <script>
+      // Paint the loading screen before first frame based on the app's theme
+      // setting (localStorage 'theme') — mirrors mainStore.isDarkMode logic.
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark-boot');
+          } else if (t === 'light') {
+            document.documentElement.classList.add('light-boot');
+          }
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
+    <style>
+      /* App dark mode enabled (class added by the script above) */
+      html.dark-boot,
+      html.dark-boot body {
+        background-color: hsl(0, 0%, 9%);
+        color: hsl(0, 0%, 98%);
+        color-scheme: dark;
+      }
+
+      /* App light mode explicitly chosen — overrides a dark system theme */
+      html.light-boot,
+      html.light-boot body {
+        background-color: hsl(0, 0%, 100%);
+        color: hsl(0, 0%, 9%);
+      }
+
+      /* Detect system dark mode preference */
+      @media (prefers-color-scheme: dark) {
+        html {
+          background-color: hsl(0, 0%, 9%);
+        }
+        body {
+          background-color: hsl(0, 0%, 9%);
+          color: hsl(0, 0%, 98%);
+        }
+      }
+
+      body {
+        margin: 0;
+        background-color: hsl(0, 0%, 100%);
+        color: hsl(0, 0%, 9%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <strong
+        >We're sorry but <%- title %> doesn't work properly without
+        JavaScript enabled. Please enable it to continue.</strong
+      >
+    </noscript>
+    <div id="app">
+      <script>
+        document.oncontextmenu = function (e) { e.preventDefault(); };
+      </script>
+      <script type="module" src="./src/main.ts"></script>
+    </div>
+  </body>
+
+</html>

@@ -1,0 +1,90 @@
+<template>
+  <div class="euclid">
+    <div class="layout-content">
+      <!-- <MobileThumb class="layout-mobile-thumb" />  -->
+      <div class="layout-mobile-center">
+        <CanvasHeader class="center-header" />
+        <CanvasCenter class="center-body"/>
+        <CanvasFooter class="center-footer"/>
+      </div>
+    </div>
+    <div class="layout-barcode">
+      <svg id="barcode"></svg>
+    </div>
+  </div>
+</template>
+
+<script lang="ts" setup>
+// import CanvasLeft from './CanvasLeft/index.vue'
+// import CanvasMenu from './CanvasMenu/index.vue'
+// import MobileThumb from './CanvasLeft/Thumb/mobile.vue'
+import CanvasHeader from './CanvasHeader/index.vue'
+import CanvasCenter from './CanvasCenter/index.vue'
+import CanvasFooter from './CanvasFooter/index.vue'
+
+</script>
+
+<style lang="scss" scoped>
+.euclid {
+  height: 100%;
+}
+.layout-content {
+  height: calc(100% - 40px);
+  display: flex;
+}
+.layout-mobile-thumb {
+  position: absolute;
+  z-index: 10;
+  width: 160px;
+  height: 100%;
+  display: flex;
+  flex-shrink: 0;
+  border-right: solid 1px $borderColor;
+  background-color: #fff;
+  flex-direction: column;
+  user-select: none;
+  transition: left 0.5s linear, right 0.5s linear;
+
+  :global(.dark) & {
+    background-color: hsl(0, 0%, 9%);
+    border-color: hsl(0, 0%, 18%);
+  }
+}
+.layout-mobile-center {
+  width: 100%;
+
+  .center-header {
+    position: relative;
+    border-bottom: 1px solid $borderColor;
+    background-color: #fff;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    font-size: 13px;
+    user-select: none;
+    height: 40px;
+
+    :global(.dark) & {
+      background-color: hsl(0, 0%, 9%);
+      border-color: hsl(0, 0%, 18%);
+    }
+  }
+
+  .center-body {
+    height: calc(100% - 40px);
+  }
+  .center-footer {
+    height: 40px;
+    position: relative;
+    border-top: 1px solid $borderColor;
+    background-color: $lightGray;
+    line-height: 1.5;
+    display: flex;
+    justify-content: space-between;
+  }
+}
+.layout-barcode {
+  position: absolute;
+  top: -200px;
+}
+</style>
