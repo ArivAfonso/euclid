@@ -25,49 +25,61 @@
         :key="size.id"
         @click="$emit('size-select', size)"
         :class="[
-          'group relative flex flex-col items-center gap-1.5 rounded border p-2 transition-all',
+          'group relative flex flex-col items-center gap-2 rounded-lg border p-2.5 transition-all duration-200',
           isSelected(size)
-            ? 'border-primary bg-primary/10'
-            : 'border-border/50 hover:border-primary/50 hover:bg-background'
+            ? 'border-red-600/60 bg-red-600/5 shadow-[0_0_0_1px_rgba(220,38,38,0.25)]'
+            : 'border-border/50 bg-card/60 hover:border-red-600/40 hover:bg-background hover:shadow-sm'
         ]"
       >
         <!-- Selection Indicator -->
-        <div v-if="isSelected(size)" class="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow-md">
-          <Check class="h-2.5 w-2.5" />
+        <div v-if="isSelected(size)" class="absolute -top-1.5 -right-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-red-600 text-white shadow-md ring-2 ring-background">
+          <Check class="h-2.5 w-2.5" stroke-width="3" />
         </div>
 
-        <!-- Canvas Preview -->
-        <div class="flex items-center justify-center h-12 w-12 overflow-hidden">
+        <!-- Canvas Preview (mini artboard) -->
+        <div class="flex h-12 w-12 items-center justify-center">
           <div
             :class="[
-              'rounded border transition-colors',
+              'relative overflow-hidden rounded-[3px] transition-all duration-200',
               isSelected(size)
-                ? 'border-primary/60 bg-primary/20'
-                : 'border-border/60 bg-muted/40 group-hover:border-primary/40 group-hover:bg-muted/60'
+                ? 'border border-red-600/50 bg-gradient-to-br from-red-600/20 to-red-600/5 shadow-[0_1px_4px_rgba(220,38,38,0.25)]'
+                : 'border border-border/80 bg-gradient-to-br from-white to-muted shadow-sm dark:from-muted dark:to-muted/30 dark:border-border/60 group-hover:border-red-600/40 group-hover:shadow-md'
             ]"
             :style="{
               width: `${getPreviewWidth(size)}px`,
               height: `${getPreviewHeight(size)}px`,
-              minWidth: '8px',
-              minHeight: '8px',
-              maxWidth: '100%',
-              maxHeight: '100%'
+              minWidth: '10px',
+              minHeight: '10px'
             }"
-          />
+          >
+            <!-- Guide lines: center cross -->
+            <div class="pointer-events-none absolute inset-0">
+              <div class="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 border-l border-dashed border-foreground/15 dark:border-white/10" />
+              <div class="absolute top-1/2 left-0 w-full h-px -translate-y-1/2 border-t border-dashed border-foreground/15 dark:border-white/10" />
+              <!-- Corner accent dots -->
+              <div class="absolute left-[2px] top-[2px] size-[2px] rounded-full bg-foreground/25 dark:bg-white/25" />
+              <div class="absolute right-[2px] bottom-[2px] size-[2px] rounded-full bg-foreground/25 dark:bg-white/25" />
+            </div>
+          </div>
         </div>
 
         <!-- Size Info -->
-        <div class="text-center">
-          <h3 class="text-[10px] font-semibold text-foreground truncate">
+        <div class="text-center leading-tight">
+          <h3 class="text-[10px] font-semibold text-foreground truncate max-w-[84px]">
             {{ size.name }}
           </h3>
-          <p class="text-[9px] text-muted-foreground">
+          <p class="text-[9px] text-muted-foreground tabular-nums">
             {{ size.description }}
           </p>
           <Badge
             v-if="size.aspectRatio"
-            variant="secondary"
-            class="mt-0.5 text-[8px] px-1 py-0"
+            :class="[
+              'mt-1 text-[8px] px-1.5 py-0 font-medium border',
+              isSelected(size)
+                ? 'bg-red-600/10 text-red-600 border-red-600/30'
+                : 'bg-muted/60 text-muted-foreground border-border/50'
+            ]"
+            variant="outline"
           >
             {{ size.aspectRatio }}
           </Badge>
@@ -78,14 +90,14 @@
       <button
         v-if="activeCategory === 'custom'"
         @click="showCustom = true"
-        class="group flex flex-col items-center justify-center gap-1.5 rounded border border-dashed border-border/60 p-2 transition-all hover:border-primary/50 hover:bg-background"
+        class="group flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-card/60 p-2.5 transition-all duration-200 hover:border-red-600/50 hover:bg-background hover:shadow-sm"
       >
-        <div class="flex items-center justify-center h-12 w-12 overflow-hidden">
-          <div class="flex h-8 w-8 items-center justify-center rounded border border-dashed border-border/60 group-hover:border-primary/50">
-            <Plus class="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+        <div class="flex h-12 w-12 items-center justify-center">
+          <div class="relative flex h-9 w-9 items-center justify-center rounded-[3px] border border-dashed border-border/70 bg-gradient-to-br from-white/60 to-muted/30 transition-all duration-200 group-hover:border-red-600/50 group-hover:from-red-600/10 group-hover:to-red-600/5 dark:from-muted/60 dark:to-muted/20">
+            <Plus class="h-4 w-4 text-muted-foreground transition-colors group-hover:text-red-600" />
           </div>
         </div>
-        <div class="text-center">
+        <div class="text-center leading-tight">
           <h3 class="text-[10px] font-semibold text-foreground">
             Custom
           </h3>
@@ -227,8 +239,9 @@ const isSelected = (size: CanvasSize) => {
 
 const getPreviewScale = (size: CanvasSize) => {
   const maxDimension = Math.max(size.width, size.height)
-  const baseScale = 80
-  return Math.min(baseScale / maxDimension, 0.5)
+  // Fit inside the 48px preview box with breathing room
+  const baseScale = 40
+  return Math.min(baseScale / maxDimension, 0.45)
 }
 
 const getPreviewWidth = (size: CanvasSize) => {

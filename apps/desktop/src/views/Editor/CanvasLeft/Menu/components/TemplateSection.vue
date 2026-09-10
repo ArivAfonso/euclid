@@ -167,20 +167,24 @@ interface LocalTemplateItem {
 }
 
 // List of available local templates with their dimensions
-const LOCAL_TEMPLATES: { name: string; width: number; height: number }[] = [
+// NOTE: previewExt defaults to 'jpeg' — set to 'png' for templates whose preview is a .png file
+const LOCAL_TEMPLATES: { name: string; width: number; height: number; previewExt?: string }[] = [
   { name: 'architecture', width: 940, height: 788 },
   { name: 'bbq', width: 1600, height: 900 },
+  { name: 'book-3', width: 1600, height: 2560, previewExt: 'png' },
   { name: 'buritto', width: 1080, height: 1080 },
   { name: 'business-book-2', width: 1600, height: 2560 },
   { name: 'business-book', width: 1600, height: 2560 },
   { name: 'car-insurance', width: 1080, height: 1080 },
   { name: 'energy-drink', width: 1080, height: 1080 },
   { name: 'ferrari', width: 1600, height: 900 },
+  { name: 'fried-chicken', width: 1080, height: 1080, previewExt: 'png' },
   { name: 'furniture-2', width: 1080, height: 1080 },
   { name: 'furniture', width: 1080, height: 1080 },
   { name: 'handbag', width: 940, height: 788 },
   { name: 'headphones', width: 1080, height: 1080 },
   { name: 'insurance', width: 1080, height: 1080 },
+  { name: 'jordans', width: 1080, height: 1080, previewExt: 'png' },
   { name: 'lincoln', width: 1600, height: 2560 },
   { name: 'mongol-empire', width: 1600, height: 2560 },
   { name: 'nike-shoes-1', width: 1080, height: 1080 },
@@ -189,10 +193,13 @@ const LOCAL_TEMPLATES: { name: string; width: number; height: number }[] = [
   { name: 'pizza', width: 1080, height: 1080 },
   { name: 'sale', width: 1080, height: 1080 },
   { name: 'save-the-date', width: 940, height: 788 },
+  { name: 'shapes-book', width: 1600, height: 2560 },
   { name: 'smoothie', width: 940, height: 788 },
   { name: 'starbucks', width: 940, height: 788 },
   { name: 'startup-summit', width: 1080, height: 1080 },
   { name: 'toys', width: 1080, height: 1080 },
+  { name: 'turntable', width: 940, height: 788, previewExt: 'png' },
+  { name: 'water-can', width: 1080, height: 1080, previewExt: 'png' },
   { name: 'wedding', width: 1600, height: 900 },
   { name: 'yoga-book', width: 1600, height: 2560 },
   { name: 'yoga', width: 940, height: 788 },
@@ -254,7 +261,7 @@ const loadLocalTemplates = () => {
       // Use relative paths — in the built Electron app loaded via file://,
       // absolute /euclid-templates/ would resolve to C:/euclid-templates/ (wrong).
       // Relative ./euclid-templates/ resolves correctly against dist/index.html.
-      preview: `./euclid-templates/${template.name}.jpeg`,
+      preview: `./euclid-templates/${template.name}.${template.previewExt ?? 'jpeg'}`,
       jsonPath: `./euclid-templates/${template.name}.json`,
       width: template.width,
       height: template.height,
