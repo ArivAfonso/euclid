@@ -9,7 +9,6 @@ declare module 'vue' {
   export interface GlobalComponents {
     Alpha: typeof import('./src/components/ColorPicker/Alpha.vue')['default']
     Checkboard: typeof import('./src/components/ColorPicker/Checkboard.vue')['default']
-    ColorButton: typeof import('./src/components/ColorButton.vue')['default']
     ColorPicker: typeof import('./src/components/ColorPicker/index.vue')['default']
     Contextmenu: typeof import('./src/components/Contextmenu/index.vue')['default']
     EditableInput: typeof import('./src/components/ColorPicker/EditableInput.vue')['default']
@@ -21,7 +20,6 @@ declare module 'vue' {
     FileExport: typeof import('./src/components/FileExport/index.vue')['default']
     FileInput: typeof import('./src/components/FileInput.vue')['default']
     FileUpload: typeof import('./src/components/FileUpload/index.vue')['default']
-    FullscreenSpin: typeof import('./src/components/FullscreenSpin.vue')['default']
     HomePopover: typeof import('./src/components/HomePopover.vue')['default']
     Hue: typeof import('./src/components/ColorPicker/Hue.vue')['default']
     LinePointMarker: typeof import('./src/components/LinePointMarker.vue')['default']
@@ -32,6 +30,5 @@ declare module 'vue' {
     Saturation: typeof import('./src/components/ColorPicker/Saturation.vue')['default']
     SvgIcon: typeof import('./src/components/SvgIcon/index.vue')['default']
     SwipeInput: typeof import('./src/components/SwipeInput.vue')['default']
-    TextColorButton: typeof import('./src/components/TextColorButton.vue')['default']
   }
 }

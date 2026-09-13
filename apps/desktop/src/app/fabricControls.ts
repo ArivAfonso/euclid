@@ -1,7 +1,7 @@
 import { noop } from '@vueuse/core'
 import { TControlSet } from '@/types/fabric'
 import { PolygonElement } from '@/types/canvas'
-import { PiBy180, toFixed } from '@/utils/common'
+import { toFixed } from '@/utils/common'
 import { px2mm } from '@/utils/image'
 import { Control, Object as FabricObject, controlsUtils, Point, Polygon, TPointerEvent, Transform, TDegree, util,TransformActionHandler, Textbox, IText } from 'fabric'
 import { storeToRefs } from 'pinia'
@@ -396,7 +396,6 @@ export const defaultControls = (): TControlSet => ({
     x: 0,
     y: 0.5,
     cursorStyleHandler: () => '',
-    offsetY: 18,
     sizeX: 0.0001,
     sizeY: 0.0001,
     touchSizeX: 0.0001,
@@ -404,20 +403,10 @@ export const defaultControls = (): TControlSet => ({
     render: (ctx, left, top, styleOverride, fabricObject: FabricObject) => {
       if (typeof window !== 'undefined' && window.localStorage.getItem('showDimensionLabel') === 'false') return
 
-      // todo: support objects reversed within a group
+      // The badge is drawn flat in screen space — the canvas context here is
+      // NOT pre-rotated, so the label must never rotate with the element.
       ctx.save()
       ctx.translate(left, top)
-
-      const calcRotate = () => {
-        const objectAngle = fabricObject.group ? fabricObject.getTotalAngle() : fabricObject.angle
-        const angleInRadians = objectAngle * PiBy180
-        const x = Math.sin(angleInRadians)
-        const y = Math.cos(angleInRadians)
-        const angle = Math.abs(x) > Math.abs(y) ? Math.sign(x) * 90 : Math.sign(y) * 90 - 90
-        return (objectAngle - angle) * PiBy180
-      }
-
-      ctx.rotate(calcRotate())
 
       const fontSize = 11
       ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
@@ -450,36 +439,32 @@ export const defaultControls = (): TControlSet => ({
       ctx.fillText(text, 0, 0.5)
       ctx.restore()
     },
-    positionHandler: (dim, finalMatrix, fabricObject: FabricObject, currentControl) => {
-      const activeObject = fabricObject.canvas?.getActiveObject instanceof Function ? fabricObject.canvas?.getActiveObject() : null
-      
+    positionHandler: (dim, finalMatrix, fabricObject: FabricObject, _currentControl) => {
+      // Anchor the badge below the lowest corner of the rotated bounding box,
+      // horizontally centered on the element, so it stays put at the bottom
+      // while the element rotates. `finalMatrix` (built by Fabric's
+      // calcOCoords) is viewport ∘ translate(center) ∘ rotate(angle) ∘ 1/zoom,
+      // so transforming local points with it yields screen coordinates.
+      const center = new Point(0, 0).transform(finalMatrix)
+      const corners = [
+        new Point(-dim.x / 2, -dim.y / 2),
+        new Point(dim.x / 2, -dim.y / 2),
+        new Point(dim.x / 2, dim.y / 2),
+        new Point(-dim.x / 2, dim.y / 2),
+      ].map((point) => point.transform(finalMatrix))
+      const bottom = Math.max(...corners.map((point) => point.y))
+
+      const activeObject =
+        fabricObject.canvas?.getActiveObject instanceof Function
+          ? fabricObject.canvas?.getActiveObject()
+          : null
+
       if (activeObject && activeObject === fabricObject) {
-        const angle = fabricObject.getTotalAngle()
-
-        const angleInRadians = angle * PiBy180
-
-        const x = Math.sin(angleInRadians)
-        const y = Math.cos(angleInRadians)
-
-        if (Math.abs(x) >= Math.abs(y)) {
-          const sign = Math.sign(x)
-          currentControl.x = sign / 2
-          currentControl.y = 0
-          currentControl.offsetX = sign * 18
-          currentControl.offsetY = 0
-        } else {
-          const sign = Math.sign(y)
-          currentControl.x = 0
-          currentControl.y = sign / 2
-          currentControl.offsetX = 0
-          currentControl.offsetY = sign * 18
-        }
-
         // Update other corner sizes together here to prevent multiple runs
         setCornersSize(fabricObject)
       }
 
-      return positionHandler(dim, finalMatrix, fabricObject, currentControl)
+      return new Point(center.x, bottom + 18)
     },
   }),
 

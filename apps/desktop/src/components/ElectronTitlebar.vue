@@ -259,7 +259,7 @@
               <span class="ml-auto text-[10px] text-muted-foreground">Get Started</span>
             </DropdownMenuItem>
             <DropdownMenuItem @click="handleKeyboardShortcuts" class="text-xs h-6 cursor-pointer my-1 text-muted-foreground">
-              <span>Keyboard Shortcuts</span>
+              <span>Shortcuts</span>
               <span class="ml-auto text-[10px] text-muted-foreground">Ctrl+Shift+?</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator class="my-0.5" />

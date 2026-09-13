@@ -25,17 +25,6 @@ A Cloudflare Worker API that searches and retrieves CC0/free stock images from U
 - `GET /api/images/{imageId}` - Get detailed information about a specific image
   - Returns full image metadata including license info
 
-### Font Search
-
-- `GET /api/fonts/all` - Search Google Fonts
-  - Query parameters: `query`, `category`, `sort`, `subset`
-  - Returns cached list of Google Fonts that persists indefinitely after the first fetch
-
-### Font Details
-
-- `GET /api/fonts/{fontFamily}` - Get detailed information about a specific font
-  - Returns full font metadata including variants, subsets, and files
-
 ## Setup & Installation
 
 ### 1. Clone and Install

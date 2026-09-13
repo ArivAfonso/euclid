@@ -232,10 +232,10 @@
               <Button
                 variant="outline"
                 size="sm"
-                class="h-7 text-[11px] font-semibold transition-all hover:bg-primary/10 hover:text-primary"
+                class="h-7 text-[11px] font-semibold select-none transition-all hover:bg-primary/10 hover:text-primary"
                 @click="changeRotate45('-')"
               >
-                <IconRotate class="h-3.5 w-3.5 mr-1.5" /> -45°
+                <IconRotate class="h-3.5 w-3.5 mr-1.5" :style="{ transform: 'rotateY(180deg)' }" /> -45°
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" class="text-xs">
@@ -250,10 +250,10 @@
               <Button
                 variant="outline"
                 size="sm"
-                class="h-7 text-[11px] font-semibold transition-all hover:bg-primary/10 hover:text-primary"
+                class="h-7 text-[11px] font-semibold select-none transition-all hover:bg-primary/10 hover:text-primary"
                 @click="changeRotate45('+')"
               >
-                <IconRotate class="h-3.5 w-3.5 mr-1.5" :style="{ transform: 'rotateY(180deg)' }" /> +45°
+                <IconRotate class="h-3.5 w-3.5 mr-1.5" /> +45°
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" class="text-xs">
@@ -469,13 +469,26 @@ const toggleShowInExport = (value: boolean) => {
 // Rotate 45 degrees (clockwise or counterclockwise)
 const changeRotate45 = (command: "+" | "-") => {
   const [canvas] = useCanvas();
-  if (!canvasObject.value || !canvas) return;
-  let _rotate = Math.floor(canvasObject.value.angle / 45) * 45;
+  const target = canvasObject.value;
+  if (!target || !canvas) return;
+  let _rotate = Math.floor(target.angle / 45) * 45;
   if (command === "+") _rotate = _rotate + 45;
   else if (command === "-") _rotate = _rotate - 45;
   if (_rotate < -180) _rotate = -180;
   if (_rotate > 180) _rotate = 180;
-  templatesStore.modifedElement(canvasObject.value, {angle: _rotate});
+
+  // Elements are anchored on their top-left origin, so setting only the angle
+  // would pivot them around that corner. Compute the matching left/top so the
+  // element rotates around its center instead.
+  const center = target.getRelativeCenterPoint();
+  const currentTransform = { angle: target.angle, left: target.left, top: target.top };
+  target.set({ angle: _rotate });
+  target.setPositionByOrigin(center, "center", "center");
+  const centeredPosition = { left: target.left, top: target.top };
+  // Restore the original transform; the store records it for undo before applying.
+  target.set(currentTransform);
+
+  templatesStore.modifedElement(target, { angle: _rotate, ...centeredPosition });
 };
 
 const { addHistorySnapshot } = useHistorySnapshot()

@@ -4,24 +4,24 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "stock-image-api",
+  "name": "euclid",
   "main": "src/index.ts",
   "compatibility_date": "2025-07-15",
   "observability": {
     "enabled": true
-  },
+  }
 
   /**
    * KV Namespaces for caching
    * https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
    */
-  "kv_namespaces": [
-    {
-      "binding": "CACHE",
-      "id": "cache_namespace",
-      "preview_id": "cache_namespace_preview"
-    }
-  ]
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "CACHE",
+  //     "id": "cache_namespace",
+  //     "preview_id": "cache_namespace_preview"
+  //   }
+  // ]
   /**
    * Smart Placement
    * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

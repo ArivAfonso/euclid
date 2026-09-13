@@ -7,23 +7,24 @@
       @cancel="onSmartScreenCancelled"
     />
 
-    <Transition name="update-slide">
-
-
-
+    <Transition
+      enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      enter-from-class="translate-y-3 scale-[0.97] opacity-0"
+      leave-active-class="transition-all duration-200 ease-[cubic-bezier(0.4,0,1,1)]"
+      leave-to-class="translate-y-2 scale-[0.98] opacity-0"
+    >
       <div
         v-if="visible"
-        class="update-notification"
-        :class="{ 'is-downloading': status.state === 'downloading', 'is-downloaded': status.state === 'downloaded' }"
+        class="fixed bottom-4 right-4 z-[99999] w-[calc(100vw_-_32px)] max-w-[420px] overflow-hidden rounded-[10px] border border-border bg-card font-sans shadow-[0_4px_24px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.04)] backdrop-blur-md dark:bg-[hsl(0,0%,11%)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.06)]"
       >
         <!-- Progress bar background -->
-        <div v-if="status.state === 'downloading' && status.progress !== undefined" class="update-progress-bar">
-          <div class="update-progress-fill" :style="{ width: status.progress + '%' }" />
+        <div v-if="status.state === 'downloading' && status.progress !== undefined" class="absolute inset-x-0 top-0 h-[3px] bg-border">
+          <div class="h-full rounded-r-[2px] bg-gradient-to-r from-indigo-500 to-violet-500 transition-[width] duration-300 ease-out" :style="{ width: status.progress + '%' }" />
         </div>
 
-        <div class="update-content">
+        <div class="flex items-start gap-3 px-4 py-3.5">
           <!-- Icon -->
-          <div class="update-icon">
+          <div class="mt-px h-[18px] w-[18px] shrink-0 text-muted-foreground">
             <!-- Idle / checking: refresh icon -->
             <svg v-if="status.state === 'checking'" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -53,11 +54,11 @@
           </div>
 
           <!-- Text -->
-          <div class="update-text">
-            <span class="update-title">
+          <div class="min-w-0 flex-1">
+            <span class="block text-[13px] leading-[1.4] text-foreground">
               <template v-if="status.state === 'checking'">Checking for updates…</template>
               <template v-else-if="status.state === 'available'">
-                Euclid <strong>v{{ status.version }}</strong> is available
+                Euclid <strong class="font-semibold text-foreground">v{{ status.version }}</strong> is available
               </template>
               <template v-else-if="status.state === 'downloading'">
                 Downloading update… {{ status.progress }}%
@@ -69,37 +70,37 @@
                 Update failed: {{ status.error }}
               </template>
             </span>
-            <span v-if="status.releaseDate" class="update-date">
+            <span v-if="status.releaseDate" class="mt-0.5 block text-[11px] text-muted-foreground">
               Released {{ formatDate(status.releaseDate) }}
             </span>
           </div>
 
           <!-- Actions -->
-          <div class="update-actions">
+          <div class="-mt-px flex shrink-0 items-center gap-1.5">
             <button
               v-if="status.state === 'available'"
-              class="update-btn update-btn-primary"
+              class="inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md bg-indigo-500 px-3 py-[5px] text-xs font-medium text-white transition-all duration-150 hover:bg-indigo-600 active:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               @click="handleDownload"
             >
               Download
             </button>
             <button
               v-if="status.state === 'downloaded'"
-              class="update-btn update-btn-primary"
+              class="inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md bg-indigo-500 px-3 py-[5px] text-xs font-medium text-white transition-all duration-150 hover:bg-indigo-600 active:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               @click="handleInstall"
             >
               Restart Now
             </button>
             <button
               v-if="status.state === 'error'"
-              class="update-btn update-btn-primary"
+              class="inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md bg-indigo-500 px-3 py-[5px] text-xs font-medium text-white transition-all duration-150 hover:bg-indigo-600 active:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               @click="handleRetry"
             >
               Retry
             </button>
             <button
               v-if="status.state !== 'downloading'"
-              class="update-btn update-btn-ghost"
+              class="inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-sm bg-transparent p-1 text-xs font-medium text-muted-foreground transition-all duration-150 hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:hover:bg-white/[0.08]"
               @click="handleDismiss"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -139,7 +140,7 @@ let unsubscribe: (() => void) | null = null
 
 const SMARTScreen_STORAGE_KEY = 'euclid:skip-smartscreen-warning'
 
-// ─── Helpers ────────────────────────────────────────────
+// ─── Helpers ────
 
 function formatDate(dateStr: string): string {
   try {
@@ -154,7 +155,7 @@ function formatDate(dateStr: string): string {
   }
 }
 
-// ─── Handlers ───────────────────────────────────────────
+// ─── Handlers ────
 
 /** Intercept Download click — show SmartScreen warning first unless user opted out */
 function handleDownload() {
@@ -247,201 +248,3 @@ onUnmounted(() => {
   unsubscribe?.()
 })
 </script>
-
-<style lang="scss" scoped>
-.update-notification {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  z-index: 99999;
-  max-width: 420px;
-  width: calc(100vw - 32px);
-  background: var(--color-surface-elevated, #ffffff);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 10px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  backdrop-filter: blur(12px);
-
-  // Dark mode support
-  :root.dark &,
-  .dark & {
-    background: var(--color-surface-elevated, #1e1e2e);
-    border-color: var(--color-border, #313244);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  }
-}
-
-.update-progress-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--color-border, #e5e7eb);
-
-  :root.dark &,
-  .dark & {
-    background: var(--color-border, #313244);
-  }
-}
-
-.update-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
-  transition: width 0.3s ease;
-  border-radius: 0 2px 2px 0;
-}
-
-.update-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-}
-
-.update-icon {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  color: var(--color-text-secondary, #6b7280);
-
-  :root.dark &,
-  .dark & {
-    color: var(--color-text-secondary, #a6adc8);
-  }
-}
-
-.update-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.update-title {
-  display: block;
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--color-text, #1f2937);
-
-  strong {
-    font-weight: 600;
-    color: var(--color-text, #111827);
-  }
-
-  :root.dark &,
-  .dark & {
-    color: var(--color-text, #cdd6f4);
-    strong {
-      color: var(--color-text, #ffffff);
-    }
-  }
-}
-
-.update-date {
-  display: block;
-  font-size: 11px;
-  color: var(--color-text-tertiary, #9ca3af);
-  margin-top: 2px;
-
-  :root.dark &,
-  .dark & {
-    color: var(--color-text-tertiary, #6c7086);
-  }
-}
-
-.update-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  margin-top: -1px;
-}
-
-.update-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-
-  &:focus-visible {
-    outline: 2px solid #6366f1;
-    outline-offset: 2px;
-  }
-}
-
-.update-btn-primary {
-  padding: 5px 12px;
-  background: #6366f1;
-  color: #ffffff;
-
-  &:hover {
-    background: #4f46e5;
-  }
-  &:active {
-    background: #4338ca;
-  }
-}
-
-.update-btn-ghost {
-  padding: 4px;
-  background: transparent;
-  color: var(--color-text-tertiary, #9ca3af);
-  border-radius: 4px;
-
-  &:hover {
-    background: var(--color-hover, #f3f4f6);
-    color: var(--color-text, #1f2937);
-  }
-
-  :root.dark &,
-  .dark & {
-    &:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--color-text, #cdd6f4);
-    }
-  }
-}
-
-// ─── Transition ─────────────────────────────────────
-
-.update-slide-enter-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.update-slide-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
-}
-.update-slide-enter-from {
-  opacity: 0;
-  transform: translateY(12px) scale(0.97);
-}
-.update-slide-leave-to {
-  opacity: 0;
-  transform: translateY(8px) scale(0.98);
-}
-
-// ─── Spinner animation ──────────────────────────────
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-.animate-pulse {
-  animation: pulse 1.5s ease-in-out infinite;
-}
-</style>
