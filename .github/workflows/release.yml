@@ -43,6 +43,15 @@ jobs:
             exit 1
           fi
 
+      - name: Warn when the Cloudflare API URL is not configured
+        shell: bash
+        env:
+          VITE_CF_WORKERS_API: ${{ vars.VITE_CF_WORKERS_API }}
+        run: |
+          if [ -z "$VITE_CF_WORKERS_API" ]; then
+            echo "::warning title=Missing VITE_CF_WORKERS_API::Desktop builds will fall back to localhost/placeholder API URLs. Set the repository variable VITE_CF_WORKERS_API (Settings -> Secrets and variables -> Actions -> Variables)."
+          fi
+
   build:
     name: Build ${{ matrix.os }}
     needs: validate
@@ -84,6 +93,13 @@ jobs:
         run: npm run build:${{ matrix.platform }} -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # Hosted Cloudflare Workers API URL. Vite statically inlines VITE_* env
+          # vars into the renderer bundle at build time, so the value must be
+          # present here. Configure it once as a repository variable:
+          # Settings -> Secrets and variables -> Actions -> Variables.
+          VITE_CF_WORKERS_API: ${{ vars.VITE_CF_WORKERS_API }}
+          # Axios base URL read by src/utils/request.ts (same worker host).
+          VITE_APP_BASE_API: ${{ vars.VITE_CF_WORKERS_API }}
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
