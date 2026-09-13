@@ -35,17 +35,7 @@
         color: hsl(0, 0%, 9%);
       }
 
-      /* Detect system dark mode preference */
-      @media (prefers-color-scheme: dark) {
-        html {
-          background-color: hsl(0, 0%, 9%);
-        }
-        body {
-          background-color: hsl(0, 0%, 9%);
-          color: hsl(0, 0%, 98%);
-        }
-      }
-
+      /* Defaults used when no boot class applies (no stored theme + light system) */
       body {
         margin: 0;
         background-color: hsl(0, 0%, 100%);

@@ -17,6 +17,11 @@ onMounted(() => {
   if (mainStore.isDarkMode) {
     document.documentElement.classList.add('dark')
   }
+  // The pre-boot theme classes from index.html exist only to paint the loading
+  // screen before Vue mounts. They must not outlive it, otherwise their body
+  // color / color-scheme rules keep overriding the app theme after the user
+  // switches modes (washed-out text, stale native controls).
+  document.documentElement.classList.remove('dark-boot', 'light-boot')
   mainStore.initializeCustomFonts()
 })
 
