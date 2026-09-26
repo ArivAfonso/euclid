@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { Templates } from '@/mocks/templates'
+import { Templates } from '@/lib/mocks/templates'
 import { Template, CanvasElement, ImageElement, GroupElement, RectElement, SerializedObjectProps } from '@/types/canvas'
 import { FabricObject, SerializedImageProps, FabricImage, Group, StaticCanvas } from 'fabric'
 import { WorkSpaceDrawType, WorkSpaceThumbType, propertiesToInclude } from '@/configs/canvas'

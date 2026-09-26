@@ -72,6 +72,9 @@ Euclid is a full-featured visual editor that lets you create designs from a rich
 | Styling    | Tailwind CSS, SCSS, shadcn-style Vue components                   |
 | Backend    | Cloudflare Workers, Hono, chanfana, zod                           |
 | Tooling    | Turborepo, npm workspaces, ESLint                                 |
+| Testing    | Vitest, Vue Test Utils, Playwright (Chromium + Electron)          |
+
+See [TESTING.md](TESTING.md) for the full automated test suite (`npm run test`, `npm run test:e2e`).
 
 
 ---

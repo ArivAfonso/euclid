@@ -1,0 +1,90 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit & component tests (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run unit & component tests
+        run: npm run test
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: apps/desktop/coverage/unit
+          if-no-files-found: ignore
+
+  e2e-web:
+    name: E2E (web / Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run web E2E tests
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-web
+          path: apps/desktop/playwright-report
+          if-no-files-found: ignore
+      - name: Upload visual walkthrough screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: apps/desktop/e2e/screenshots
+          if-no-files-found: ignore
+
+  e2e-electron:
+    name: E2E (Electron smoke)
+    runs-on: ubuntu-latest
+    # NOTE: Electron smoke tests are opportunistic in CI. They require system
+    # libraries for Chromium/X11 (provided by the runner image + xvfb) and the
+    # same dev-server wiring the web project uses. Flip continue-on-error off
+    # once this job has proven stable for your runner image.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Build Electron main + preload and run smoke tests
+        run: xvfb-run --auto-servernum npm run test:e2e:electron
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-electron
+          path: apps/desktop/playwright-report
+          if-no-files-found: ignore

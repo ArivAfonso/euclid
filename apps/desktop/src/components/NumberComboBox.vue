@@ -8,7 +8,7 @@
         @blur="handleBlur"
         type="text"
         inputmode="decimal"
-        class="h-7 text-[11px] pr-6 border-input [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        class="h-7 text-[11px] pr-6 border-input dark:bg-background [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         :placeholder="placeholder"
       />
       <Popover v-model:open="isOpen">

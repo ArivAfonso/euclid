@@ -30,3 +30,11 @@ dist/*
 dev-dist/*
 types/auto-imports.d.ts
 types/components.d.ts
+
+# Test artifacts
+coverage
+test-results
+playwright-report
+blob-report
+.playwright
+apps/desktop/e2e/screenshots

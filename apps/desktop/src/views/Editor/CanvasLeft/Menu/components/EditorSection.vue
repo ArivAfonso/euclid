@@ -40,60 +40,66 @@
             </h3>
           </div>
           
-          <div class="grid grid-cols-3 gap-1">
-            <TooltipProvider>
+          <div class="grid grid-cols-3 gap-1.5">
+            <TooltipProvider v-for="brush in brushStyles" :key="brush.id">
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Button 
-                    variant="outline" 
-                    class="h-14 flex-col gap-1 transition-all hover:bg-primary/10"
-                    :class="{ 'bg-primary/10 border-primary': activeBrush === 'pencil' }"
-                    @click="enableDrawing('pencil')"
+                  <button
+                    type="button"
+                    class="relative flex h-[74px] flex-col items-center justify-center gap-1 rounded-md border px-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    :class="activeBrush === brush.id
+                      ? 'border-primary/70 bg-primary/10 text-primary ring-1 ring-primary/30'
+                      : 'border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:bg-muted/40 hover:text-foreground'"
+                    :aria-pressed="activeBrush === brush.id"
+                    @click="enableDrawing(brush.id)"
                   >
-                    <IconText class="size-3.5" />
-                    <span class="text-[10px] font-medium">Pencil</span>
-                  </Button>
+                    <component :is="brush.icon" class="size-3.5 shrink-0" />
+                    <span class="text-[10px] font-semibold leading-none">{{ brush.label }}</span>
+
+                    <!-- Live stroke preview: reacts to the brush width slider -->
+                    <svg class="mt-0.5 h-4 w-full" viewBox="0 0 64 20" fill="none" aria-hidden="true">
+                      <path
+                        v-if="brush.id === 'pencil'"
+                        :d="pencilPreviewPath"
+                        stroke="currentColor"
+                        :stroke-width="pencilPreviewWidth"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        opacity="0.9"
+                      />
+                      <template v-else-if="brush.id === 'circle'">
+                        <circle
+                          v-for="(dot, index) in previewWavePoints"
+                          :key="index"
+                          :cx="dot.x"
+                          :cy="dot.y"
+                          :r="circlePreviewRadius"
+                          fill="currentColor"
+                          opacity="0.85"
+                        />
+                      </template>
+                      <template v-else>
+                        <circle
+                          v-for="(dot, index) in sprayPreviewDots"
+                          :key="index"
+                          :cx="dot.x"
+                          :cy="dot.y"
+                          :r="dot.r * sprayPreviewScale"
+                          fill="currentColor"
+                          :opacity="dot.opacity"
+                        />
+                      </template>
+                    </svg>
+
+                    <span
+                      v-if="activeBrush === brush.id"
+                      class="absolute right-1 top-1 size-1.5 rounded-full bg-primary"
+                    />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" class="text-xs">
-                  <p>Pencil Brush</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button 
-                    variant="outline" 
-                    class="h-14 flex-col gap-1 transition-all hover:bg-primary/10"
-                    :class="{ 'bg-primary/10 border-primary': activeBrush === 'circle' }"
-                    @click="enableDrawing('circle')"
-                  >
-                    <IconRound class="size-3.5" />
-                    <span class="text-[10px] font-medium">Circle</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" class="text-xs">
-                  <p>Circle Brush</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button 
-                    variant="outline" 
-                    class="h-14 flex-col gap-1 transition-all hover:bg-primary/10"
-                    :class="{ 'bg-primary/10 border-primary': activeBrush === 'spray' }"
-                    @click="enableDrawing('spray')"
-                  >
-                    <i class="icon-font icon-text-path text-sm" />
-                    <span class="text-[10px] font-medium">Spray</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" class="text-xs">
-                  <p>Spray Brush</p>
+                  <p class="font-medium">{{ brush.label }} brush</p>
+                  <p class="text-muted-foreground">{{ brush.hint }}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -182,7 +188,7 @@
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="outline" class="h-14 flex-col gap-1 transition-all hover:bg-primary/10" @click="drawText(60)">
-                    <IconH3 class="size-3.5" />
+                    <Heading2 class="size-3.5" />
                     <span class="text-[10px] font-medium">Subtitle</span>
                   </Button>
                 </TooltipTrigger>
@@ -196,7 +202,7 @@
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="outline" class="h-14 flex-col gap-1 transition-all hover:bg-primary/10" @click="drawText(36)">
-                    <IconTextRotationNone class="size-3.5" />
+                    <Pilcrow class="size-3.5" />
                     <span class="text-[10px] font-medium">Body</span>
                   </Button>
                 </TooltipTrigger>
@@ -210,7 +216,7 @@
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="outline" class="h-14 flex-col gap-1 transition-all hover:bg-primary/10" @click="drawVerticalText(36)">
-                    <IconTextRotationDown class="size-3.5" />
+                    <ArrowDownAZ class="size-3.5" />
                     <span class="text-[10px] font-medium">Vertical</span>
                   </Button>
                 </TooltipTrigger>
@@ -224,7 +230,7 @@
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="outline" class="h-14 flex-col gap-1 transition-all hover:bg-primary/10" @click="drawText(36, undefined, true)">
-                    <IconText class="size-3.5" />
+                    <TypeOutline class="size-3.5" />
                     <span class="text-[10px] font-medium">Hollow</span>
                   </Button>
                 </TooltipTrigger>
@@ -238,7 +244,7 @@
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="outline" class="h-14 flex-col gap-1 transition-all hover:bg-primary/10" @click="drawArcText">
-                    <i class="icon-font icon-text-path text-sm" />
+                    <Rainbow class="size-3.5" />
                     <span class="text-[10px] font-medium">Arc</span>
                   </Button>
                 </TooltipTrigger>
@@ -617,7 +623,7 @@
 
 <script lang="ts" setup>
 import { onUnmounted, ref, watch } from 'vue'
-import { Loader2 } from 'lucide-vue-next'
+import { ArrowDownAZ, CircleDot, Heading2, Loader2, PencilLine, Pilcrow, Rainbow, SprayCan, TypeOutline } from 'lucide-vue-next'
 import * as fabric from 'fabric'
 import { nanoid } from 'nanoid'
 
@@ -691,6 +697,60 @@ type BrushType = 'pencil' | 'circle' | 'spray'
 const activeBrush = ref<BrushType | null>(null)
 const brushWidth = ref(10)
 const brushColor = ref('#000000')
+
+// Brush style picker
+const brushStyles = [
+  { id: 'pencil' as BrushType, label: 'Pencil', hint: 'Solid, pen-like stroke', icon: PencilLine },
+  { id: 'circle' as BrushType, label: 'Circle', hint: 'Overlapping round dabs', icon: CircleDot },
+  { id: 'spray' as BrushType, label: 'Spray', hint: 'Scattered airbrush specks', icon: SprayCan },
+]
+
+// Stroke previews: geometry is shared between the brushes so each card shows
+// the same path drawn in its own style, and sizes react to the brush width.
+const PREVIEW_SAMPLES = 15
+
+const previewWavePoints = computed(() =>
+  Array.from({ length: PREVIEW_SAMPLES }, (_, index) => {
+    const t = index / (PREVIEW_SAMPLES - 1)
+    return {
+      x: Number((4 + t * 56).toFixed(2)),
+      y: Number((10 + Math.sin(t * Math.PI * 1.6) * 4.5).toFixed(2)),
+    }
+  }),
+)
+
+const pencilPreviewPath = computed(() => {
+  const points = previewWavePoints.value
+  let path = `M ${points[0].x} ${points[0].y}`
+  for (let i = 1; i < points.length - 1; i++) {
+    const midX = (points[i].x + points[i + 1].x) / 2
+    const midY = (points[i].y + points[i + 1].y) / 2
+    path += ` Q ${points[i].x} ${points[i].y} ${midX.toFixed(2)} ${midY.toFixed(2)}`
+  }
+  const last = points[points.length - 1]
+  return `${path} L ${last.x} ${last.y}`
+})
+
+const sprayPreviewDots = computed(() =>
+  Array.from({ length: 46 }, (_, index) => {
+    const t = index / 45
+    const waveY = 10 + Math.sin(t * Math.PI * 1.6) * 4.5
+    // Deterministic pseudo-random jitter so the specks look scattered
+    const x = 4 + t * 56 + ((((index * 37) % 11) - 5) * 0.8)
+    const y = waveY + ((((index * 53) % 13) - 6) * 0.7)
+    return {
+      x: Number(x.toFixed(2)),
+      y: Number(y.toFixed(2)),
+      r: Number((0.55 + ((index * 29) % 5) * 0.14).toFixed(2)),
+      opacity: Number((0.4 + ((index * 17) % 5) * 0.12).toFixed(2)),
+    }
+  }),
+)
+
+const pencilPreviewWidth = computed(() => Math.max(1.2, Math.min(3.4, brushWidth.value / 5)))
+const circlePreviewRadius = computed(() => Math.max(1.3, Math.min(3.1, brushWidth.value / 6.5)))
+const sprayPreviewScale = computed(() => Math.max(0.6, Math.min(1.5, brushWidth.value / 12)))
+
 let hasDrawingHistoryListener = false
 const handlePathCreated = ({ path }: { path?: fabric.FabricObject }) => {
   if (!path) return
@@ -815,7 +875,13 @@ const openQRCodeDialog = () => {
 
 const createQRElement = (style: QRCodeType) => {
   const codeOption = getCodeOption(118, 118)
-  const svgString = generateQRCodeMap[style](codeOption)
+  // beautify-qrcode renderers expect the ENCODED qrcode instance (returned by
+  // encodeData), not the raw options object — passing options directly throws
+  // "Cannot read properties of undefined (reading 'width')" and leaves the
+  // dialog hanging without creating an element.
+  const encoded = encodeData(codeOption)
+  if (!encoded) return
+  const svgString = generateQRCodeMap[style](encoded)
   const src = `data:image/svg+xml;base64,${btoa(svgString)}`
   const qrOption = {
     codeStyle: style,

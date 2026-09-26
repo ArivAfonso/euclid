@@ -1,7 +1,7 @@
 import { noop } from '@vueuse/core'
 import { TControlSet } from '@/types/fabric'
 import { PolygonElement } from '@/types/canvas'
-import { toFixed } from '@/utils/common'
+import { toFixed, PiBy180 } from '@/utils/common'
 import { px2mm } from '@/utils/image'
 import { Control, Object as FabricObject, controlsUtils, Point, Polygon, TPointerEvent, Transform, TDegree, util,TransformActionHandler, Textbox, IText } from 'fabric'
 import { storeToRefs } from 'pinia'
@@ -196,13 +196,34 @@ export const actionHandler = (eventData: TPointerEvent, transform: any, x: numbe
 }
 
 /**
- * Calculate current control position
+ * Placement of the dimension badge, derived purely from the element's angle.
+ *
+ * The badge "swaps to the other side" as the angle grows instead of following
+ * the rotation all the way around:
+ * - roughly upright or upside down → bottom / top edge;
+ * - rotated past ±45° → the nearest left / right edge.
+ *
+ * The text only ever tilts up to ±45°, so it never reads upside down.
+ *
+ * Being a pure function of the angle, position & rotation can never disagree
+ * (the previous implementation mutated the shared control while placing it,
+ * which broke when the angle came from the sidebar instead of the canvas).
  */
-const positionHandler: Control['positionHandler'] = (dim, finalMatrix, fabricObject, currentControl) => {
-  return new Point(
-    currentControl.x * dim.x + currentControl.offsetX,
-    currentControl.y * dim.y + currentControl.offsetY,
-  ).transform(finalMatrix)
+const getBadgePlacement = (angle: number) => {
+  const angleInRadians = angle * PiBy180
+  const x = Math.sin(angleInRadians)
+  const y = Math.cos(angleInRadians)
+  const sideways = Math.abs(x) >= Math.abs(y)
+  const sign = sideways ? Math.sign(x) : Math.sign(y)
+  return {
+    // Anchor: fraction of the element box (each axis) …
+    anchorX: sideways ? sign / 2 : 0,
+    anchorY: sideways ? 0 : sign / 2,
+    // …plus an 18px screen-space offset away from that edge
+    offsetX: sideways ? sign * 18 : 0,
+    offsetY: sideways ? 0 : sign * 18,
+    textRotation: (angle - (sideways ? sign * 90 : sign * 90 - 90)) * PiBy180,
+  }
 }
 
 export const getWidthHeight = (fabricObject: FabricObject, noFixed = false) => {
@@ -396,6 +417,7 @@ export const defaultControls = (): TControlSet => ({
     x: 0,
     y: 0.5,
     cursorStyleHandler: () => '',
+    offsetY: 18,
     sizeX: 0.0001,
     sizeY: 0.0001,
     touchSizeX: 0.0001,
@@ -403,10 +425,12 @@ export const defaultControls = (): TControlSet => ({
     render: (ctx, left, top, styleOverride, fabricObject: FabricObject) => {
       if (typeof window !== 'undefined' && window.localStorage.getItem('showDimensionLabel') === 'false') return
 
-      // The badge is drawn flat in screen space — the canvas context here is
-      // NOT pre-rotated, so the label must never rotate with the element.
+      // Follow the element but stay readable: the badge settles on the
+      // nearest screen axis, so it merely tilts ±45° instead of ever
+      // turning upside down. `getBadgePlacement` also drives the side swap.
       ctx.save()
       ctx.translate(left, top)
+      ctx.rotate(getBadgePlacement(fabricObject.getTotalAngle()).textRotation)
 
       const fontSize = 11
       ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
@@ -440,19 +464,10 @@ export const defaultControls = (): TControlSet => ({
       ctx.restore()
     },
     positionHandler: (dim, finalMatrix, fabricObject: FabricObject, _currentControl) => {
-      // Anchor the badge below the lowest corner of the rotated bounding box,
-      // horizontally centered on the element, so it stays put at the bottom
-      // while the element rotates. `finalMatrix` (built by Fabric's
-      // calcOCoords) is viewport ∘ translate(center) ∘ rotate(angle) ∘ 1/zoom,
-      // so transforming local points with it yields screen coordinates.
-      const center = new Point(0, 0).transform(finalMatrix)
-      const corners = [
-        new Point(-dim.x / 2, -dim.y / 2),
-        new Point(dim.x / 2, -dim.y / 2),
-        new Point(dim.x / 2, dim.y / 2),
-        new Point(-dim.x / 2, dim.y / 2),
-      ].map((point) => point.transform(finalMatrix))
-      const bottom = Math.max(...corners.map((point) => point.y))
+      // Position is a pure function of the current angle, so it is always
+      // correct — no matter whether this runs while the element is active
+      // (canvas handles) or while it is being rotated from the sidebar.
+      const { anchorX, anchorY, offsetX, offsetY } = getBadgePlacement(fabricObject.getTotalAngle())
 
       const activeObject =
         fabricObject.canvas?.getActiveObject instanceof Function
@@ -464,7 +479,10 @@ export const defaultControls = (): TControlSet => ({
         setCornersSize(fabricObject)
       }
 
-      return new Point(center.x, bottom + 18)
+      return new Point(
+        anchorX * dim.x + offsetX,
+        anchorY * dim.y + offsetY,
+      ).transform(finalMatrix)
     },
   }),
 

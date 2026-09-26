@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pre-commit hook — runs the FAST test layer (unit + component tests, ~50s).
+#
+# Enabled per clone with:  npm run setup:hooks
+# (which sets `git config core.hooksPath .githooks`)
+#
+# Bypass for a single commit (e.g. WIP):  git commit --no-verify
+set -e
+
+echo "[pre-commit] Running unit & component tests (Vitest)..."
+npm run test
+echo "[pre-commit] Unit tests passed. Full E2E runs on pre-push and in CI."

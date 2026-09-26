@@ -161,15 +161,23 @@ const getEncodeData = (width = 135, height = 135) => {
 }
 
 const qrPreviews = computed(() =>
-  QRCodeStyleLibs.map((style) => ({
-    name: style.name,
-    preview: `data:image/svg+xml;base64,${btoa(generateQRCodeMap[style.name as QRCodeType](getCodeOption()))}`,
-  })),
+  QRCodeStyleLibs.map((style) => {
+    const encoded = encodeData(getCodeOption())
+    return {
+      name: style.name,
+      // Renderers require the encoded qrcode instance, not the raw options.
+      preview: encoded
+        ? `data:image/svg+xml;base64,${btoa(generateQRCodeMap[style.name as QRCodeType](encoded))}`
+        : '',
+    }
+  }),
 )
 
 const createElement = (style: QRCodeType) => {
   const codeOption = getCodeOption(88, 88)
-  const svgString = generateQRCodeMap[style](codeOption)
+  const encoded = encodeData(codeOption)
+  if (!encoded) return
+  const svgString = generateQRCodeMap[style](encoded)
   const src = `data:image/svg+xml;base64,${btoa(svgString)}`
   const qrOption = {
     codeStyle: style,

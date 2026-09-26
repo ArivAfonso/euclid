@@ -68,7 +68,10 @@ const createWindow = () => {
   const isDev = !app.isPackaged;
   
   if (isDev) {
-    const devServerUrl = 'http://localhost:5173';
+    // electron-vite sets ELECTRON_RENDERER_URL when running `electron-vite dev`.
+    // Falling back to the default port keeps plain `electron .` working, while
+    // allowing tests (or custom dev servers) to point the window elsewhere.
+    const devServerUrl = process.env.ELECTRON_RENDERER_URL || 'http://localhost:5173';
     log.info(`Loading from dev server: ${devServerUrl}`);
     mainWindow.loadURL(devServerUrl);
   } else {

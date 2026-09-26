@@ -29,6 +29,17 @@
     },
     "test": {
       "dependsOn": ["^build"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:e2e": {
+      "cache": false,
+      "outputs": ["test-results/**", "playwright-report/**"]
+    },
+    "test:e2e:electron": {
+      "cache": false
     }
   }
 }

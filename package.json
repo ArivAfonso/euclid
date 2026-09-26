@@ -19,7 +19,13 @@
     "deploy:server": "turbo run deploy --filter=@euclid/server",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "test:e2e": "turbo run test:e2e",
+    "test:e2e:electron": "turbo run test:e2e:electron",
+    "test:all": "npm run test && npm run test:e2e && npm run test:e2e:electron",
+    "setup:hooks": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "turbo": "^2.2.3"

@@ -251,47 +251,7 @@
               Layout</Label>
           </div>
 
-          <div class="grid grid-cols-4 gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    variant="outline"
-                    :class="[
-                      'h-7 px-2 transition-all',
-                      elementGrapheme ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
-                    ]"
-                    @click="handleElementArrange(false)"
-                  >
-                    <MoveHorizontal class="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" class="text-xs">
-                  <p>Horizontal</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    variant="outline"
-                    :class="[
-                      'h-7 px-2 transition-all',
-                      !elementGrapheme ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
-                    ]"
-                    @click="handleElementArrange(true)"
-                  >
-                    <MoveVertical class="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" class="text-xs">
-                  <p>Vertical</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
+          <div class="grid grid-cols-2 gap-1">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger as-child>
@@ -555,7 +515,7 @@
 import { computed, ref, watch } from 'vue'
 import { useMainStore, useTemplatesStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import { FabricObject, IText, Textbox } from 'fabric'
+import { IText, Textbox } from 'fabric'
 import { FontSizeLibs, LineHeightLibs, CharSpaceLibs } from '@/configs/texts'
 import { propertiesToInclude } from '@/configs/canvas'
 import { TextboxElement } from '@/types/canvas'
@@ -566,7 +526,6 @@ import { getAvailableFontWeights, getWeightName } from '@/configs/fonts'
 import { nanoid } from 'nanoid'
 import { ArcText } from '@/extension/object/ArcText'
 import { CurvedText } from '@/extension/object/CurvedText'
-import { VerticalText } from '@/extension/object/VerticalText'
 import opentype from "opentype.js"
 import ElementPosition from '../Components/ElementPosition.vue'
 import ElementBorder from '../Components/ElementBorder.vue'
@@ -626,8 +585,6 @@ import {
   AlignCenter,
   AlignRight,
   AlignJustify,
-  MoveHorizontal,
-  MoveVertical,
   IndentDecrease,
   IndentIncrease,
   Spline,
@@ -701,7 +658,6 @@ const documentFonts = computed(() => {
 })
 
 const handleElement = computed(() => canvasObject.value as Textbox | ArcText)
-const elementGrapheme = computed(() => handleElement.value.type.toLowerCase() !== ElementNames.VERTICALTEXT)
 const elementBackgrounColor = computed(() => {
   const element = handleElement.value
   if (element.type.toLowerCase() === ElementNames.ARCTEXT) {
@@ -1026,25 +982,6 @@ const changeCharSpacing = (charSpacing: number) => {
     templatesStore.modifedElement(handleElement.value, {charSpacing})
   }
   
-  canvas.renderAll()
-}
-
-const handleElementArrange = (status: boolean) => {
-  const options = (handleElement.value as any).toObject(propertiesToInclude as any[])
-  options.lineHeight = 12
-  delete options.type
-  options.id = nanoid(10)
-  let textElement: FabricObject = new Textbox(handleElement.value.text, options)
-  if (status) {
-    textElement = new VerticalText(handleElement.value.text, options)
-  }
-  const activeObject = canvas.getActiveObject()
-  if (activeObject) canvas.remove(activeObject)
-  canvas.discardActiveObject()
-  canvas.add(textElement)
-  templatesStore.addElement(textElement)
-  canvas.setActiveObject(textElement)
-  mainStore.setCanvasObject(textElement)
   canvas.renderAll()
 }
 
