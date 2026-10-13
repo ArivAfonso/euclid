@@ -104,6 +104,31 @@
               </div>
               <div class="flex items-center justify-between">
                 <div class="space-y-0.5">
+                  <Label class="text-xs font-medium">Grid Density</Label>
+                  <p class="text-[11px] text-muted-foreground">Grid lines per ruler division</p>
+                </div>
+                <div class="w-28">
+                  <Select :model-value="String(gridDensity)" @update:model-value="handleGridDensityChange">
+                    <SelectTrigger class="h-7 text-xs border border-input">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem
+                          v-for="item in gridDensityOptions"
+                          :key="item.value"
+                          :value="String(item.value)"
+                          class="text-xs"
+                        >
+                          {{ item.label }}
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="space-y-0.5">
                   <Label class="text-xs font-medium">Show Rulers</Label>
                   <p class="text-[11px] text-muted-foreground">Display rulers along the edges</p>
                 </div>
@@ -372,6 +397,8 @@ import {
 } from 'lucide-vue-next'
 import type { ExportTypes } from '@/types/common'
 import { DesignUnitMode } from '@/configs/background'
+import { DefaultUnitMode } from '@/utils/image'
+import useCanvas from '@/views/Canvas/useCanvas'
 
 const props = defineProps<{
   open?: boolean
@@ -388,6 +415,13 @@ const { isDarkMode, disableHotkeys, sizeMode, unitMode, exportType } = storeToRe
 // Local state for settings
 const autoSaveEnabled = ref(localStorage.getItem('autoSave') === 'true')
 const showGrid = ref(localStorage.getItem('showGrid') !== 'false')
+const gridDensity = ref(Number(localStorage.getItem('gridDensity')) || 2)
+const gridDensityOptions = [
+  { value: 1, label: 'Sparse' },
+  { value: 2, label: 'Normal' },
+  { value: 5, label: 'Dense' },
+  { value: 10, label: 'Very dense' },
+]
 const showRulers = ref(localStorage.getItem('showRulers') !== 'false')
 const showGuides = ref(localStorage.getItem('showGuides') !== 'false')
 const showDimensionLabel = ref(localStorage.getItem('showDimensionLabel') !== 'false')
@@ -415,6 +449,7 @@ watch(() => props.open, (value) => {
       // Reload persisted state when opening
       autoSaveEnabled.value = localStorage.getItem('autoSave') === 'true'
       showGrid.value = localStorage.getItem('showGrid') !== 'false'
+      gridDensity.value = Number(localStorage.getItem('gridDensity')) || 2
       showRulers.value = localStorage.getItem('showRulers') !== 'false'
       showGuides.value = localStorage.getItem('showGuides') !== 'false'
       showDimensionLabel.value = localStorage.getItem('showDimensionLabel') !== 'false'
@@ -443,9 +478,25 @@ const handleToggleAutoSave = (value: boolean) => {
 const handleToggleGrid = (value: boolean) => {
   showGrid.value = value
   localStorage.setItem('showGrid', String(value))
+  const [canvas] = useCanvas()
+  if (canvas?.rulerInstance) {
+    canvas.rulerInstance.showGrid = value
+    canvas.requestRenderAll()
+  }
 }
 
-const handleToggleRulers = (value: boolean) => {
+const handleGridDensityChange = (value: unknown) => {
+  const density = Number(value) || 2
+  gridDensity.value = density
+  localStorage.setItem('gridDensity', String(density))
+  const [canvas] = useCanvas()
+  if (canvas?.rulerInstance) {
+    canvas.rulerInstance.gridDensity = density
+    canvas.requestRenderAll()
+  }
+}
+
+const handleToggleRulers =(value: boolean) => {
   showRulers.value = value
   localStorage.setItem('showRulers', String(value))
 }
@@ -476,7 +527,8 @@ const handleExportTypeChange = (type: ExportTypes) => {
 
 const resetToDefaults = () => {
   autoSaveEnabled.value = false
-  showGrid.value = true
+  handleToggleGrid(true)
+  handleGridDensityChange(2)
   showRulers.value = true
   showGuides.value = true
   showDimensionLabel.value = true
@@ -485,7 +537,7 @@ const resetToDefaults = () => {
   defaultSidebarPanel.value = 'editor'
   exportQuality.value = 90
   pptRasterizeFonts.value = true
-  unitMode.value = 0
+  unitMode.value = DefaultUnitMode
   handleToggleDarkMode(false)
   mainStore.disableHotkeys = false
   mainStore.setExportType('image')

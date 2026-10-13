@@ -2,7 +2,7 @@ import { noop } from '@vueuse/core'
 import { TControlSet } from '@/types/fabric'
 import { PolygonElement } from '@/types/canvas'
 import { toFixed, PiBy180 } from '@/utils/common'
-import { px2mm } from '@/utils/image'
+import { px2unit, UnitMode } from '@/utils/image'
 import { Control, Object as FabricObject, controlsUtils, Point, Polygon, TPointerEvent, Transform, TDegree, util,TransformActionHandler, Textbox, IText } from 'fabric'
 import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/store'
@@ -439,7 +439,9 @@ export const defaultControls = (): TControlSet => ({
 
       const { x, y } = getWidthHeight(fabricObject)
       const { unitMode } = storeToRefs(useMainStore())
-      let text = unitMode.value === 0 ? `${toFixed(px2mm(x))} × ${toFixed(px2mm(y))}` : `${x} × ${y}`
+      let text = unitMode.value === UnitMode.PX
+        ? `${x} × ${y}`
+        : `${toFixed(px2unit(x, unitMode.value))} × ${toFixed(px2unit(y, unitMode.value))}`
       const width = ctx.measureText(text).width + 18
       const height = fontSize + 12
       const radius = 5

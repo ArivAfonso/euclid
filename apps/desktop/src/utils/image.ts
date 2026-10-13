@@ -122,3 +122,21 @@ export const px2inch = (value: number) => {
 export const inch2px = (value: number) => {
   return mm2px(value * 25.4)
 }
+
+/** Measurement units selectable in the editor (ids match `DesignUnitMode`). */
+export const UnitMode = { MM: 0, PX: 1, INCH: 2 } as const
+export const DefaultUnitMode = UnitMode.PX
+
+/** Convert canvas px to the unit currently shown in the UI. */
+export const px2unit = (value: number, unitMode: number) => {
+  if (unitMode === UnitMode.MM) return px2mm(value)
+  if (unitMode === UnitMode.INCH) return px2inch(value)
+  return value
+}
+
+/** Convert a value typed in the current UI unit back to canvas px. */
+export const unit2px = (value: number, unitMode: number) => {
+  if (unitMode === UnitMode.MM) return mm2px(value)
+  if (unitMode === UnitMode.INCH) return inch2px(value)
+  return value
+}

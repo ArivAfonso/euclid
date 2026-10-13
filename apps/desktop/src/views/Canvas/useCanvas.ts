@@ -115,13 +115,16 @@ const initCanvas = () => {
     freeDrawingCursor: 'crosshair'
   })
   // const keybinding = new Keybinding()
+  const ruler = new FabricRuler(canvas)
+  // Restore grid visibility from the persisted "Show Grid" setting.
+  ruler.showGrid = !isMobile() && localStorage.getItem('showGrid') !== 'false'
   editorDisposables.push(
     new FabricTool(canvas),
     new FabricGuide(canvas),
     new FabricDistanceGuide(canvas),
     new HoverBorders(canvas),
     new WheelScroll(canvas),
-    new FabricRuler(canvas),
+    ruler,
     new FabricTouch(canvas),
   )
   canvas.preserveObjectStacking = true

@@ -38,6 +38,12 @@ export interface RulerOptions {
   enabled?: boolean
 
   /**
+   * Whether a grid is drawn across the whole canvas, aligned with the ruler ticks
+   * @default false
+   */
+  showGrid?: boolean
+
+  /**
    * Background color
    */
   backgroundColor?: string
@@ -56,8 +62,20 @@ export interface RulerOptions {
    * Highlight color
    */
   highlightColor?: string
+
   /**
-   * Highlight color
+   * Grid line color
+   */
+  gridColor?: string
+
+  /**
+   * Number of grid lines per major ruler tick (1 = major ticks only)
+   * @default 2
+   */
+  gridDensity?: number
+
+  /**
+   * Unit name
    */
   unitName: string
 
@@ -67,6 +85,9 @@ export type HighlightRect = {skip?: TAxis} & Rect
 
 export class FabricRuler extends Disposable {
   private canvasEvents
+  private renderEvents
+  private canvasEventsAttached = false
+  private renderListenerAttached = false
   public lastCursor: string
   public workSpaceDraw?: fabricRect
   public options: Required<RulerOptions>
@@ -85,6 +106,8 @@ export class FabricRuler extends Disposable {
       ruleSize: 20,
       fontSize: 8,
       enabled: isMobile() ? false : true,
+      showGrid: false,
+      gridDensity: Number(localStorage.getItem('gridDensity')) || 2,
     })
 
     const mainStore = useMainStore()
@@ -99,6 +122,7 @@ export class FabricRuler extends Disposable {
               backgroundColor: 'hsl(0, 0%, 9%)',
               borderColor: 'hsl(0, 0%, 18%)',
               highlightColor: 'hsla(0, 0%, 45%, 0.15)',
+              gridColor: 'hsla(0, 0%, 55%, 0.35)',
               textColor: 'hsl(0, 0%, 65%)',
               unitName: unitName,
             }
@@ -106,6 +130,7 @@ export class FabricRuler extends Disposable {
               backgroundColor: '#ffffff',
               borderColor: 'hsl(0, 0%, 85%)',
               highlightColor: 'hsla(0, 0%, 0%, 0.08)',
+              gridColor: 'hsla(0, 0%, 45%, 0.3)',
               textColor: 'hsl(0, 0%, 30%)',
               unitName: unitName,
             }),
@@ -114,12 +139,14 @@ export class FabricRuler extends Disposable {
     })
     
     this.canvasEvents = {
-      'after:render': this.render.bind(this),
       'mouse:move': this.mouseMove.bind(this),
       'mouse:down': this.mouseDown.bind(this),
       'mouse:up': this.mouseUp.bind(this),
       'referenceline:moving': this.referenceLineMoving.bind(this),
       'referenceline:mouseup': this.referenceLineMouseup.bind(this),
+    }
+    this.renderEvents = {
+      'after:render': this.render.bind(this),
     }
     this.enabled = this.options.enabled
     canvas.rulerInstance = this
@@ -288,13 +315,60 @@ export class FabricRuler extends Disposable {
 
   public set enabled(value) {
     this.options.enabled = value
-    if (value) {
+    this.updateCanvasEventListeners()
+    this.updateRenderListener()
+    this.canvas.requestRenderAll()
+  }
+
+  public get showGrid() {
+    return this.options.showGrid
+  }
+
+  /**
+   * Toggle the grid drawn across the whole canvas. The grid is rendered
+   * independently from the ruler strips.
+   */
+  public get gridDensity() {
+    return this.options.gridDensity
+  }
+
+  public set gridDensity(value) {
+    this.options.gridDensity = value
+  }
+
+  public set showGrid(value) {
+    this.options.showGrid = value
+    this.updateRenderListener()
+    this.canvas.requestRenderAll()
+  }
+
+  /**
+   * Mouse interactions (reference lines, cursor) only exist while the ruler
+   * strips are visible.
+   */
+  private updateCanvasEventListeners() {
+    if (this.canvasEventsAttached === this.options.enabled) return
+    if (this.options.enabled) {
       this.canvas.on(this.canvasEvents)
-      this.render({ ctx: this.canvas.contextContainer })
     } else {
       this.canvas.off(this.canvasEvents)
-      this.canvas.requestRenderAll()
     }
+    this.canvasEventsAttached = this.options.enabled
+  }
+
+  /**
+   * The canvas must be re-rendered after every draw as long as the ruler or
+   * the grid is visible.
+   */
+  private updateRenderListener() {
+    const shouldListen = this.options.enabled || this.options.showGrid
+    if (this.renderListenerAttached === shouldListen) return
+    if (shouldListen) {
+      this.canvas.on(this.renderEvents)
+    } else {
+      this.canvas.off(this.renderEvents)
+    }
+    this.renderListenerAttached = shouldListen
   }
 
   /**
@@ -309,7 +383,13 @@ export class FabricRuler extends Disposable {
 
   private render({ ctx }: { ctx: CanvasRenderingContext2D }) {
     if (ctx !== this.canvas.contextContainer) return
-    if (!this.enabled) return
+    const { enabled, showGrid } = this.options
+    if (!enabled && !showGrid) return
+
+    // Draw the grid first so the ruler strips stay readable on top of it
+    if (showGrid) this.drawGrid(ctx)
+    if (!enabled) return
+
     const { viewportTransform: vpt } = this.canvas
 
     // Calculate element rectangle
@@ -339,6 +419,73 @@ export class FabricRuler extends Disposable {
       fill: backgroundColor,
       stroke: borderColor,
     })
+  }
+
+  /**
+   * Screen positions (in canvas/viewport coordinates) of the major ruler
+   * ticks along one axis.
+   */
+  private getMajorTickPositions(rulerLength: number, startCalibration: number, subdivisions = 1) {
+    const zoom = this.canvas.getZoom()
+    const { gap, displayGap, toDisplay, fromDisplay } = this.getRulerMetrics(zoom)
+    const unitLength = Math.ceil(rulerLength / zoom)
+    // The major tick must be anchored in the selected unit, not in the
+    // previous pixel position. Otherwise panning makes mm/in labels drift
+    // away from their actual unit boundaries.
+    const startDisplay = Math.floor((toDisplay(startCalibration) + Number.EPSILON) / displayGap) * displayGap
+    const startOffset = fromDisplay(startDisplay) - startCalibration
+
+    const positions: number[] = []
+    // Skip subdivisions that would be packed tighter than ~6px on screen
+    const divisions = Math.max(1, Math.min(subdivisions, Math.floor((gap * zoom) / 6)))
+    for (let pos = 0; pos + startOffset <= unitLength; pos += gap) {
+      for (let i = 0; i < divisions; i++) {
+        positions.push((startOffset + pos + (gap * i) / divisions) * zoom)
+      }
+    }
+    return positions
+  }
+
+  /**
+   * Draw a grid across the entire canvas, aligned with the major ticks of the
+   * rulers (so the grid always matches the ruler units and adapts to zoom).
+   */
+  private drawGrid(ctx: CanvasRenderingContext2D) {
+    const zoom = this.canvas.getZoom()
+    if (!zoom) return
+
+    const { viewportTransform: vpt } = this.canvas
+    const { width, height } = this.getSize()
+    const { gridColor, gridDensity } = this.options
+
+    // Scene coordinates displayed at the top / left edge of the viewport,
+    // the same calibration the rulers use.
+    const startCalibrationX = -(vpt[4] / vpt[0])
+    const startCalibrationY = -(vpt[5] / vpt[3])
+
+    ctx.save()
+    ctx.beginPath()
+    ctx.strokeStyle = gridColor
+    ctx.lineWidth = 1
+
+    // Vertical lines, aligned with the horizontal ruler
+    for (const position of this.getMajorTickPositions(width, startCalibrationX, gridDensity)) {
+      const x = Math.round(position) + 0.5
+      if (x < 0 || x > width) continue
+      ctx.moveTo(x, 0)
+      ctx.lineTo(x, height)
+    }
+
+    // Horizontal lines, aligned with the vertical ruler
+    for (const position of this.getMajorTickPositions(height, startCalibrationY, gridDensity)) {
+      const y = Math.round(position) + 0.5
+      if (y < 0 || y > height) continue
+      ctx.moveTo(0, y)
+      ctx.lineTo(width, y)
+    }
+
+    ctx.stroke()
+    ctx.restore()
   }
 
   private draw(opt: {ctx: CanvasRenderingContext2D, isHorizontal: boolean, rulerLength: number, startCalibration: number}) {
@@ -629,6 +776,7 @@ export class FabricRuler extends Disposable {
 
   public dispose(): void {
     super.dispose()
+    this.showGrid = false
     this.enabled = false
   }
 }

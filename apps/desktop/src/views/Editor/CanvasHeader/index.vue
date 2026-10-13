@@ -1,6 +1,6 @@
 <template>
   <div data-onboarding="canvas-header" class="flex items-center justify-between w-full px-3 py-1.5 bg-white dark:bg-[hsl(0,0%,9%)] border-b border-gray-200 dark:border-gray-800 [&_button_svg]:text-gray-500 dark:[&_button_svg]:text-gray-400">
-    <!-- Left handler -->
+    <!-- Left handler (fixed) -->
     <div class="flex items-center gap-1">
       <TooltipProvider>
         <Tooltip>
@@ -41,245 +41,62 @@
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-
-      <Separator orientation="vertical" class="h-6 mx-1" />
-
-      <TooltipProvider v-if="canGroup">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              :class="{ 'opacity-50 cursor-not-allowed': !canGroup }"
-              :disabled="!canGroup"
-              @click="group()"
-            >
-              <Square class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Group</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider v-if="canUnGroup">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              :class="{ 'opacity-50 cursor-not-allowed': !canUnGroup }"
-              :disabled="!canUnGroup"
-              @click="ungroup()"
-            >
-              <Ungroup class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Ungroup</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              @click="changeRuler()"
-            >
-              <Ruler class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Toggle Ruler</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              @click="triggerImport"
-            >
-              <Upload class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Import JSON</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      
-      <input
-        type="file"
-        ref="fileInput"
-        accept=".json"
-        class="hidden"
-        @change="handleImportJson"
-      />
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              @click="enterPresentationMode()"
-            >
-              <Maximize class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Fullscreen Presentation (F5)</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <Separator orientation="vertical" class="h-6 mx-1" />
-
-      <!-- Alignment Tools -->
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              :disabled="!hasSelection"
-              @click="alignLeft()"
-            >
-              <AlignStartVertical class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Align Left</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              :disabled="!hasSelection"
-              @click="alignCenter()"
-            >
-              <AlignCenterVertical class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Align Center</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              :disabled="!hasSelection"
-              @click="alignRight()"
-            >
-              <AlignEndVertical class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Align Right</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <Separator orientation="vertical" class="h-6 mx-1" />
-
-      <!-- Layer Controls -->
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              :disabled="!hasSelection"
-              @click="bringToFront()"
-            >
-              <ArrowUp class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Bring to Front</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-8 w-8 p-0"
-              :disabled="!hasSelection"
-              @click="sendToBack()"
-            >
-              <ArrowDown class="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" class="text-xs">
-            <span>Send to Back</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
     </div>
 
-    <!-- Center handler -->
-    <div class="flex items-center gap-2" v-if="canIntersection">
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <Button variant="ghost" size="sm" class="h-8 px-2 gap-1">
-            <Combine class="w-4 h-4" />
-            <span class="text-xs">Boolean</span>
-            <ChevronDown class="w-3 h-3 ml-0.5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem @click="intersection(0)">
-            <Copy class="w-4 h-4 mr-2" />
-            Union
-          </DropdownMenuItem>
-          <DropdownMenuItem @click="intersection(1)">
-            <Minus class="w-4 h-4 mr-2" />
-            Difference
-          </DropdownMenuItem>
-          <DropdownMenuItem @click="intersection(2)">
-            <Shapes class="w-4 h-4 mr-2" />
-            Intersection
-          </DropdownMenuItem>
-          <DropdownMenuItem @click="intersection(3)">
-            <Scissors class="w-4 h-4 mr-2" />
-            Xor
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+    <!-- Center handler (right-click to customize) -->
+    <ContextMenu>
+      <ContextMenuTrigger as-child>
+        <div class="flex flex-1 items-center justify-start gap-1 min-h-8 ml-1">
+          <template v-for="(section, sectionIndex) in visibleSections" :key="section[0].id">
+            <Separator orientation="vertical" class="h-6 mx-1" />
+            <TooltipProvider v-for="item in section" :key="item.id">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="h-8 w-8 p-0"
+                    :disabled="item.disabled?.()"
+                    @click="item.run()"
+                  >
+                    <component :is="item.icon" class="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" class="text-xs">
+                  <span>{{ item.tooltip ?? item.label }}</span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </template>
 
-    <!-- Right handler -->
+          <input
+            type="file"
+            ref="fileInput"
+            accept=".json"
+            class="hidden"
+            @change="handleImportJson"
+          />
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent class="w-52">
+        <ContextMenuLabel class="text-xs dark:text-gray-400">Customize Toolbar</ContextMenuLabel>
+        <ContextMenuSeparator />
+        <ContextMenuCheckboxItem
+          v-for="entry in customizeMenu"
+          :key="entry.label"
+          class="text-xs dark:text-gray-400"
+          :model-value="entry.ids.every(isButtonShown)"
+          @select.prevent
+          @update:model-value="entry.ids.forEach(id => setButtonShown(id, $event))"
+        >
+          {{ entry.label }}
+        </ContextMenuCheckboxItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem class="text-xs dark:text-gray-400" @click="resetToolbar">Reset to Default</ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+
+    <!-- Right handler (fixed) -->
     <div class="flex items-center gap-1">
       <TooltipProvider>
         <Tooltip>
@@ -352,11 +169,11 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, type Component } from "vue";
 import { useRouter } from 'vue-router'
 import { ElementNames, AlignCommand, LayerCommand } from "@/types/elements";
 import { storeToRefs } from "pinia";
-import { Object as FabricObject, Group } from "fabric";
+import { Object as FabricObject } from "fabric";
 import { useFabricStore, useMainStore, useSnapshotStore, useTemplatesStore } from "@/store";
 import useCanvas from '@/views/Canvas/useCanvas'
 import { toast } from '@/components/ui/toast/use-toast'
@@ -385,12 +202,15 @@ import {
   PopoverContent, 
   PopoverTrigger 
 } from '@/components/ui/popover';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
+import {
+  ContextMenu,
+  ContextMenuCheckboxItem,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 
 // Lucide icons
 import { 
@@ -400,19 +220,15 @@ import {
   Ungroup, 
   Ruler, 
   Maximize,
-  Copy,
-  ChevronDown,
   AlignStartVertical,
   AlignCenterVertical,
   AlignEndVertical,
   ArrowUp,
   ArrowDown,
-  Shapes,
-  Scissors,
-  Combine,
   Plus, 
   Minus,
   Upload,
+  Grid3x3,
 } from 'lucide-vue-next';
 
 const router = useRouter()
@@ -423,7 +239,7 @@ const { updateProject, getProject, generateAndSaveThumbnail } = useProjects()
 
 const { alignElement, layerElement } = useHandleTool();
 const { setCanvasScalePercentage, scaleCanvas, resetCanvas } = useCanvasScale();
-const { combineElements, uncombineElements, intersectElements } = useHandleElement();
+const { combineElements, uncombineElements } = useHandleElement();
 const { zoom } = storeToRefs(fabricStore);
 const { canvasObject } = storeToRefs(mainStore);
 const { templateIndex, templates } = storeToRefs(templatesStore);
@@ -527,28 +343,16 @@ onUnmounted(() => {
 
 const handleElement = computed(() => canvasObject.value as FabricObject);
 
+// Fabric 6 reports capitalized types ('Path', 'ActiveSelection'), ElementNames are lowercase
+const typeOf = (obj?: FabricObject) => obj?.type?.toLowerCase();
+
 const canGroup = computed(() => {
   if (!handleElement.value) return false;
-  return handleElement.value.type === ElementNames.ACTIVE;
+  return typeOf(handleElement.value) === ElementNames.ACTIVE;
 });
 const canUnGroup = computed(() => {
   if (!handleElement.value) return false;
-  return handleElement.value.type === ElementNames.GROUP;
-});
-
-const canIntersection = computed(() => {
-  const [canvas] = useCanvas();
-  if (!handleElement.value) return false;
-  if (handleElement.value.type === ElementNames.GROUP) {
-    const groupObject = handleElement.value as Group;
-    const sonObjects = groupObject._objects.filter((ele) => ele.type === ElementNames.PATH);
-    if (groupObject._objects.length === 2 && sonObjects && sonObjects.length === 2) return true;
-    return false;
-  }
-  if (handleElement.value.type !== ElementNames.ACTIVE) return false;
-
-  const activeObjects = canvas.getActiveObjects();
-  return activeObjects.length === 2 && activeObjects.filter((ele) => ele.type === ElementNames.PATH).length === 2;
+  return typeOf(handleElement.value) === ElementNames.GROUP;
 });
 
 const hasSelection = computed(() => {
@@ -557,13 +361,13 @@ const hasSelection = computed(() => {
 
 // Combine
 const group = () => {
-  if (!handleElement.value || handleElement.value.type !== ElementNames.ACTIVE) return;
+  if (!handleElement.value || typeOf(handleElement.value) !== ElementNames.ACTIVE) return;
   combineElements();
 };
 
 // Uncombine
 const ungroup = () => {
-  if (!handleElement.value || handleElement.value.type !== ElementNames.GROUP) return;
+  if (!handleElement.value || typeOf(handleElement.value) !== ElementNames.GROUP) return;
   uncombineElements();
 };
 
@@ -574,6 +378,16 @@ const changeRuler = () => {
   const ruler = (canvas as any).rulerInstance
   if (!ruler) return
   ruler.enabled = !ruler.enabled
+};
+
+// Toggle grid visibility (persisted so it survives reloads)
+const changeGrid = () => {
+  const [ canvas ] = useCanvas();
+  if (!canvas) return
+  const ruler = canvas.rulerInstance
+  if (!ruler) return
+  ruler.showGrid = !ruler.showGrid
+  localStorage.setItem('showGrid', String(ruler.showGrid))
 };
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -635,11 +449,6 @@ const handleImportJson = (event: Event) => {
   reader.readAsText(file)
 }
 
-const intersection = (val: number) => {
-  if (!handleElement.value) return;
-  intersectElements(val);
-};
-
 const applyCanvasPresetScale = (value: number) => {
   setCanvasScalePercentage(value);
 };
@@ -681,6 +490,90 @@ const enterPresentationMode = () => {
 const handlePresentationSlideChange = (index: number) => {
   templatesStore.setTemplateIndex(index)
 };
+
+// ---- Customizable toolbar (right-click the middle section) ----
+interface ToolbarButton {
+  id: string
+  label: string
+  tooltip?: string
+  icon: Component
+  /** Buttons sharing a section are rendered together, sections are separated by a divider */
+  section: number
+  /** Only affects the customize menu: buttons with the same category are listed in one submenu */
+  category?: string
+  run: () => void
+  disabled?: () => boolean
+  /** Contextual buttons only render when this returns true (still listed in the customize menu) */
+  available?: () => boolean
+}
+
+const toolbarButtons: ToolbarButton[] = [
+  { id: 'group', label: 'Group', category: 'Grouping', icon: Square, section: 0, run: group, available: () => canGroup.value },
+  { id: 'ungroup', label: 'Ungroup', category: 'Grouping', icon: Ungroup, section: 0, run: ungroup, available: () => canUnGroup.value },
+  { id: 'ruler', label: 'Toggle Ruler', icon: Ruler, section: 0, run: changeRuler },
+  { id: 'grid', label: 'Toggle Grid', icon: Grid3x3, section: 0, run: changeGrid },
+  { id: 'import', label: 'Import JSON', icon: Upload, section: 0, run: triggerImport },
+  { id: 'fullscreen', label: 'Fullscreen Presentation', tooltip: 'Fullscreen Presentation (F5)', icon: Maximize, section: 0, run: enterPresentationMode },
+  { id: 'alignLeft', label: 'Align Left', category: 'Alignment', icon: AlignStartVertical, section: 1, run: alignLeft, disabled: () => !hasSelection.value },
+  { id: 'alignCenter', label: 'Align Center', category: 'Alignment', icon: AlignCenterVertical, section: 1, run: alignCenter, disabled: () => !hasSelection.value },
+  { id: 'alignRight', label: 'Align Right', category: 'Alignment', icon: AlignEndVertical, section: 1, run: alignRight, disabled: () => !hasSelection.value },
+  { id: 'bringToFront', label: 'Bring to Front', category: 'Layers', icon: ArrowUp, section: 2, run: bringToFront, disabled: () => !hasSelection.value },
+  { id: 'sendToBack', label: 'Send to Back', category: 'Layers', icon: ArrowDown, section: 2, run: sendToBack, disabled: () => !hasSelection.value },
+]
+
+// Entries for the customize menu: buttons sharing a category get one checkbox that toggles them all
+const customizeMenu = (() => {
+  const entries: { label: string; ids: string[] }[] = []
+  for (const button of toolbarButtons) {
+    const label = button.category ?? button.label
+    const existing = button.category ? entries.find(entry => entry.label === label) : undefined
+    if (existing) existing.ids.push(button.id)
+    else entries.push({ label, ids: [button.id] })
+  }
+  return entries
+})()
+
+const HIDDEN_BUTTONS_KEY = 'headerHiddenButtons'
+// Buttons hidden out of the box; users can show them from the right-click menu
+const DEFAULT_HIDDEN_BUTTONS = ['grid']
+const loadHiddenButtons = (): string[] => {
+  try {
+    const stored = localStorage.getItem(HIDDEN_BUTTONS_KEY)
+    if (stored === null) return [...DEFAULT_HIDDEN_BUTTONS]
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : [...DEFAULT_HIDDEN_BUTTONS]
+  } catch {
+    return [...DEFAULT_HIDDEN_BUTTONS]
+  }
+}
+const hiddenButtons = ref<string[]>(loadHiddenButtons())
+
+watch(hiddenButtons, (value) => {
+  try {
+    localStorage.setItem(HIDDEN_BUTTONS_KEY, JSON.stringify(value))
+  } catch { /* storage unavailable */ }
+}, { deep: true })
+
+const isButtonShown = (id: string) => !hiddenButtons.value.includes(id)
+
+const setButtonShown = (id: string, shown: boolean) => {
+  hiddenButtons.value = shown
+    ? hiddenButtons.value.filter(hidden => hidden !== id)
+    : [...hiddenButtons.value, id]
+}
+
+const resetToolbar = () => {
+  hiddenButtons.value = [...DEFAULT_HIDDEN_BUTTONS]
+}
+
+const visibleSections = computed(() => {
+  const sections: ToolbarButton[][] = []
+  for (const button of toolbarButtons) {
+    if (!isButtonShown(button.id) || button.available?.() === false) continue
+    ;(sections[button.section] ??= []).push(button)
+  }
+  return sections.filter(Boolean)
+})
 </script>
 
 <style scoped>

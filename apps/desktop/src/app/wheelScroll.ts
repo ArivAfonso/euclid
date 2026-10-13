@@ -2,6 +2,7 @@
 import { CanvasEvents, Canvas, Point, TPointerEvent, TPointerEventInfo } from 'fabric'
 import { useIntervalFn } from '@vueuse/core'
 import { Disposable, toDisposable } from '@/utils/lifecycle'
+import { useFabricStore } from '@/store'
 
 /**
  * Canvas default wheel behavior — scrolls the canvas view vertically instead of zooming.
@@ -24,6 +25,17 @@ export class WheelScroll extends Disposable {
       e.e.preventDefault()
       e.e.stopPropagation()
       const { deltaY } = e.e
+
+      // Ctrl/Cmd + scroll zooms around the cursor (also covers trackpad pinch)
+      if (e.e.ctrlKey || e.e.metaKey) {
+        const current = this.canvas.getZoom()
+        const next = Math.min(5, Math.max(0.1, current * 0.999 ** deltaY))
+        this.canvas.zoomToPoint(this.canvas.getViewportPoint(e.e), next)
+        useFabricStore().zoom = this.canvas.getZoom()
+        this.canvas.requestRenderAll()
+        return
+      }
+
       // Normalize deltaY for consistent scroll speed across browsers/devices
       const factor = Math.abs(deltaY) < 10 ? deltaY * 2 : deltaY
       // Scroll canvas vertically — negate deltaY so scroll direction matches natural scrolling

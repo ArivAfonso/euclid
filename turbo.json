@@ -39,7 +39,8 @@
       "outputs": ["test-results/**", "playwright-report/**"]
     },
     "test:e2e:electron": {
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["DISPLAY", "XAUTHORITY"]
     }
   }
 }

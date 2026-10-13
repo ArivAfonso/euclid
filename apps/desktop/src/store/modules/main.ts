@@ -12,6 +12,7 @@ import type { CustomFontFamily, CustomFontVariantMeta } from '@/types/fonts'
 import type { StoredCustomFont } from '@/utils/customFontStorage'
 import { getAllStoredFonts, getStoredFontsByFamily, deleteStoredFonts } from '@/utils/customFontStorage'
 import { recordsToFamilies, revokeFontObjectUrls, normalizeVariantDescriptor } from '@/utils/customFonts'
+import { DefaultUnitMode } from '@/utils/image'
 
 export interface MainState {
   canvasObject: FabricObject | undefined
@@ -44,6 +45,19 @@ export interface MainState {
   isDarkMode: boolean
   imageLoadingTasks: number
   savingProject: boolean
+}
+
+// Persisted unit (0=mm, 1=px, 2=inch). Anything missing or invalid falls back
+// to the default (px); an explicitly saved mm (0) is respected.
+const readStoredUnitMode = (): number => {
+  if (typeof window === 'undefined') return DefaultUnitMode
+  try {
+    const raw = localStorage.getItem('unitMode')
+    const value = raw === null || raw.trim() === '' ? NaN : Number(raw)
+    return [0, 1, 2].includes(value) ? value : DefaultUnitMode
+  } catch {
+    return DefaultUnitMode
+  }
 }
 
 const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
@@ -178,9 +192,7 @@ export const useMainStore = defineStore('main', {
     illustrationCategoryData: ImageCategoryInfo,
     handleElementId: '', // element being operated on
     sizeMode: 0,  // template style
-    unitMode: typeof window !== 'undefined'
-      ? Number(localStorage.getItem('unitMode')) || 0  // unit (0=mm, 1=px, 2=inch)
-      : 0,
+    unitMode: readStoredUnitMode(), // unit (0=mm, 1=px, 2=inch), px by default
     gridColorSelf: [[]], // custom color
     databaseId, // identifier for the current application's indexedDB database ID
     selectedTemplatesIndex: [],

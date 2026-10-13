@@ -29,6 +29,23 @@ test.describe('templates', () => {
     expect(await page.locator('button:has(img)').count()).toBeGreaterThan(20)
   })
 
+  test('groups the 1080x1440 templates in their own section', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Classic', exact: true })).toBeVisible()
+
+    const section = page
+      .locator('div.space-y-2')
+      .filter({ has: page.getByRole('heading', { name: 'Classic', exact: true }) })
+    for (const title of ['Clock', 'Cocktail', 'Ikea', 'Market', 'Wedding 2']) {
+      await expect(section.locator(`img[alt="${title}"]`)).toHaveCount(1)
+    }
+
+    // They no longer show up again under the generic Portrait group
+    const portrait = page
+      .locator('div.space-y-2')
+      .filter({ has: page.getByRole('heading', { name: 'Portrait', exact: true }) })
+    await expect(portrait.locator('img[alt="Clock"]')).toHaveCount(0)
+  })
+
   test('filters templates by search term', async ({ page }) => {
     await page.getByPlaceholder('Search templates').fill('pizza')
 

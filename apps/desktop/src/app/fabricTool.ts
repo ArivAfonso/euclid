@@ -185,7 +185,7 @@ export class FabricTool extends Disposable {
     const { spaceKeyState } = storeToRefs(useKeyboardStore())
     const { lengthX, lengthY, isSwiping } = useCanvasSwipe({
       onSwipeStart: (e: any) => {
-        if (e.e.buttons === 2 || (spaceKeyState.value && e.e.buttons === 1)) {
+        if (e.e.buttons === 2 || e.e.buttons === 4 || (spaceKeyState.value && e.e.buttons === 1)) {
           isSwiping.value = true
           vpt = canvas.viewportTransform
           this.handMoveActivate = true

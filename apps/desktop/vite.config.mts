@@ -58,15 +58,6 @@ export default ({ command, mode }: ConfigEnv): UserConfigExport => {
         scss: {
           additionalData: `@import "src/assets/style/variable.scss";@import "src/assets/style/mixin.scss";`,
         },
-        less: {
-          modifyVars: {
-            "primary-color": "#d14424",
-            "text-color": "#41464b",
-            "font-size-base": "13px",
-            "border-radius-base": "2px",
-          },
-          javascriptEnabled: true,
-        },
       },
     },
     resolve: {

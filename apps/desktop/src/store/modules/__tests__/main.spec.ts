@@ -41,8 +41,22 @@ describe('store/main', () => {
       expect(store.unitMode).toBe(2)
     })
 
-    it('falls back to mm (0) for invalid stored unitMode', () => {
+    it('defaults to px (1) when no unit was ever stored', () => {
+      localStorage.removeItem('unitMode')
+      const store = useMainStore()
+      expect(store.unitMode).toBe(1)
+    })
+
+    it('falls back to px (1) for invalid stored unitMode', () => {
       localStorage.setItem('unitMode', 'not-a-number')
+      expect(useMainStore().unitMode).toBe(1)
+      setActivePinia(createPinia())
+      localStorage.setItem('unitMode', '7')
+      expect(useMainStore().unitMode).toBe(1)
+    })
+
+    it('keeps an explicitly saved mm (0) unit', () => {
+      localStorage.setItem('unitMode', '0')
       const store = useMainStore()
       expect(store.unitMode).toBe(0)
     })

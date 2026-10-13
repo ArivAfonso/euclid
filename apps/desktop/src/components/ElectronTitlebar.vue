@@ -725,7 +725,10 @@ const handleToggleGrid = () => {
   showGrid.value = !showGrid.value
   localStorage.setItem('showGrid', String(showGrid.value))
   const [canvas] = useCanvas()
-  if (canvas) canvas.renderAll()
+  if (canvas) {
+    if (canvas.rulerInstance) canvas.rulerInstance.showGrid = showGrid.value
+    canvas.renderAll()
+  }
 }
 
 const handleToggleGuides = () => {

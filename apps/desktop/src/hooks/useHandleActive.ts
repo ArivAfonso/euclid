@@ -7,7 +7,7 @@ import { check } from '@/utils/check'
 import { ref, watchEffect, computed } from 'vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
-import { px2mm, mm2px } from '@/utils/image'
+import { px2unit, unit2px } from '@/utils/image'
 import type { WritableComputedRef } from 'vue'
 import NP from 'number-precision'
 import useCanvas from '@/views/Canvas/useCanvas'
@@ -19,10 +19,10 @@ export default () => {
   const { unitMode } = storeToRefs(mainStore)
 
   const handleUnit = (val: number) => {
-    return unitMode.value === 0 ? px2mm(val) : val
+    return px2unit(val, unitMode.value)
   }
   const handleInput = (val: number) => {
-    return unitMode.value === 0 ? mm2px(val) : val
+    return unit2px(val, unitMode.value)
   }
   const handleActive = <K extends keyof ObjectRef, T = ObjectRef[K] | undefined>(key: K): WritableComputedRef<{
     modelValue: T

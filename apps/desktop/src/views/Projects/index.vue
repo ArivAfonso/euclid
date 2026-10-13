@@ -25,6 +25,7 @@
           @update:viewMode="viewMode = $event"
           @new-folder="showNewFolderDialog = true"
           @new-project="showNewProjectDialog = true"
+          @bulk-import="showBulkImportDialog = true"
         />
 
         <!-- Projects Container -->
@@ -307,6 +308,14 @@
       </DialogContent>
     </Dialog>
 
+    <!-- Bulk Import Dialog -->
+    <BulkImportDialog
+      v-model:open="showBulkImportDialog"
+      :folderId="currentFolderId"
+      :destinationLabel="bulkImportDestinationLabel"
+      @imported="handleBulkImported"
+    />
+
     <!-- Onboarding Tour -->
     <OnboardingTour
       v-if="showProjectsTour"
@@ -429,6 +438,7 @@ import ProjectsToolbar from './ProjectsToolbar.vue'
 import GridView from './GridView.vue'
 import ListView from './ListView.vue'
 import EmptyState from './EmptyState.vue'
+import BulkImportDialog from './BulkImportDialog.vue'
 import useProjects, { SavedProject, ProjectFolder } from '@/hooks/useProjects'
 import { useMainStore, useTemplatesStore, useOnboardingStore } from '@/store'
 import { toast } from '@/components/ui/toast/use-toast'
@@ -471,7 +481,8 @@ const {
   getSubfolders,
   getFolderPath,
   updateFolderColor,
-  invalidateProjectsCache
+  invalidateProjectsCache,
+  generateMissingThumbnails
 } = useProjects()
 const templatesStore = useTemplatesStore()
 const onboardingStore = useOnboardingStore()
@@ -550,6 +561,7 @@ const currentFolderId = ref<string | null>(null)
 const searchQuery = ref('')
 const viewMode = ref<'grid' | 'list'>('grid')
 const showNewProjectDialog = ref(false)
+const showBulkImportDialog = ref(false)
 const newProjectName = ref('')
 const newProjectDescription = ref('')
 const importedJson = ref<any>(null)
@@ -597,6 +609,15 @@ const loadProjects = () => {
   allFolders.value = getFolders()
 }
 
+// Render thumbnails for projects that have none (bulk-imported or never
+// opened) in the background, showing each one as soon as it is ready.
+// The cache array is copied so the ref sees a new value and re-renders.
+const renderMissingThumbnails = () => {
+  void generateMissingThumbnails(() => {
+    projects.value = [...getSavedProjects()]
+  })
+}
+
 // Get current folder's subfolders
 const currentSubfolders = computed(() => {
   return allFolders.value.filter(f => f.parentId === currentFolderId.value)
@@ -617,6 +638,12 @@ const folderPath = computed(() => {
     }
   }
   return path
+})
+
+// Where bulk-imported projects will be placed
+const bulkImportDestinationLabel = computed(() => {
+  if (!currentFolderId.value) return 'Root'
+  return folderPath.value[folderPath.value.length - 1]?.name || 'this folder'
 })
 
 // Filter projects in current folder
@@ -873,6 +900,23 @@ const handleDelete = () => {
 
 // ==================== FOLDER HANDLERS ====================
 
+const handleBulkImported = (payload: { projects: SavedProject[]; skipped: number }) => {
+  loadProjects()
+  if (payload.projects.length) renderMissingThumbnails()
+
+  const count = payload.projects.length
+  const created = `${count} project${count === 1 ? '' : 's'} created`
+  const skipped = payload.skipped
+    ? ` · ${payload.skipped} file${payload.skipped === 1 ? '' : 's'} skipped`
+    : ''
+
+  toast({
+    title: 'Import complete',
+    description: `${created}${skipped}.`,
+    variant: count === 0 ? 'destructive' : 'default'
+  })
+}
+
 const handleCreateFolder = () => {
   if (!newFolderName.value.trim()) return
   
@@ -1001,6 +1045,7 @@ onMounted(() => {
   // Also ensures the "projects got copied" scenario doesn't happen.
   invalidateProjectsCache()
   loadProjects()
+  renderMissingThumbnails()
   // If the user navigated here from the editor, dismiss the "Saving project..." overlay
   // now that all data is loaded and the grid is about to render
   mainStore.setSavingProject(false)

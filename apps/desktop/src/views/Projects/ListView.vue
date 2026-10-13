@@ -67,7 +67,7 @@
               {{ project.name }}
             </td>
             <td class="px-3 py-2 text-muted-foreground">Project</td>
-            <td class="px-3 py-2 text-muted-foreground">{{ project.width }}×{{ project.height }}</td>
+            <td class="px-3 py-2 text-muted-foreground">{{ Math.round(project.width) }}×{{ Math.round(project.height) }}</td>
             <td class="px-3 py-2 text-muted-foreground">{{ formatDate(project.modified) }}</td>
             <td class="px-3 py-2 text-right">
               <Button variant="ghost" size="sm" class="h-6 w-6 p-0" @click.stop>

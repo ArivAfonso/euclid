@@ -26,6 +26,12 @@ import {
 import { EffectItem } from '@/types/common'
 import { Mask } from '@/types/elements'
 import type { Abortable } from 'fabric'
+import { getSourceSize, stepDownscale } from '@/utils/downscale'
+
+/** Below this on-screen scale a single bilinear pass starts dropping source pixels. */
+const STEP_DOWNSCALE_THRESHOLD = 0.5
+/** A cached downscale is reused while it is at most this much larger than needed. */
+const STEP_DOWNSCALE_TOLERANCE = 1.25
 
 
 export class Image extends OriginImage {
@@ -38,6 +44,7 @@ export class Image extends OriginImage {
   public effects?: EffectItem[]
   public groupMask?: Mask
   private _isBakingEffects = false
+  private _downscaleCache?: { source: CanvasImageSource; canvas: HTMLCanvasElement }
   constructor(element: ImageSource, options?: any) {
     super(element, { filters: [], ...options });
     this.effects = options?.effects
@@ -259,6 +266,74 @@ export class Image extends OriginImage {
     this._drawCroppingLines(ctx)
     this._drawCroppingPath(ctx)
     ctx.restore();
+  }
+
+  /**
+   * Draw strongly-minified images from a progressively downscaled copy instead
+   * of letting the browser shrink them in one bilinear pass (see utils/downscale).
+   */
+  _renderFill(ctx: CanvasRenderingContext2D) {
+    const downscaled = this._getStepDownscaled()
+    if (!downscaled) return super._renderFill(ctx)
+
+    // Temporarily draw from the smaller copy; _filterScaling maps object
+    // coordinates (incl. crop) onto the drawn element, so scale it to match.
+    const self = this as any
+    const element = self._element
+    const filterScalingX = self._filterScalingX
+    const filterScalingY = self._filterScalingY
+    const { width, height } = getSourceSize(element)
+    self._element = downscaled
+    self._filterScalingX = filterScalingX * (downscaled.width / width)
+    self._filterScalingY = filterScalingY * (downscaled.height / height)
+    try {
+      super._renderFill(ctx)
+    } finally {
+      self._element = element
+      self._filterScalingX = filterScalingX
+      self._filterScalingY = filterScalingY
+    }
+  }
+
+  private _getStepDownscaled(): HTMLCanvasElement | undefined {
+    const self = this as any
+    const element = self._element as CanvasImageSource | undefined
+    if (!element || !this.imageSmoothing || this.__isCropping) return
+
+    // Total scaling already includes canvas zoom, retina and export multiplier.
+    const scale = this.getTotalObjectScaling()
+    const relX = Math.abs(scale.x) / self._filterScalingX
+    const relY = Math.abs(scale.y) / self._filterScalingY
+    if (!(relX > 0 && relY > 0) || (relX >= STEP_DOWNSCALE_THRESHOLD && relY >= STEP_DOWNSCALE_THRESHOLD)) return
+
+    const { width, height } = getSourceSize(element as HTMLImageElement)
+    if (!width || !height) return
+    const targetW = Math.max(1, Math.ceil(width * Math.min(relX, 1)))
+    const targetH = Math.max(1, Math.ceil(height * Math.min(relY, 1)))
+
+    const cached = this._downscaleCache
+    const fits = (have: number, need: number) => have >= need && have <= need * STEP_DOWNSCALE_TOLERANCE
+    if (cached && cached.source === element && fits(cached.canvas.width, targetW) && fits(cached.canvas.height, targetH)) {
+      return cached.canvas
+    }
+
+    // Rebuilding every frame while the user drags a scale handle is too costly;
+    // fall back to the plain draw and catch up on the next idle render.
+    if (this.isMoving || (this.canvas as any)?._currentTransform?.target === this) return
+
+    try {
+      const canvas = stepDownscale(element as HTMLImageElement, { width: targetW, height: targetH })
+      this._downscaleCache = { source: element, canvas }
+      return canvas
+    } catch {
+      // Tainted / undecodable sources: keep the browser's default path.
+      return
+    }
+  }
+
+  dispose() {
+    super.dispose()
+    this._downscaleCache = undefined
   }
 
   drawBorders(ctx: CanvasRenderingContext2D, options:any, styleOverride:any) {

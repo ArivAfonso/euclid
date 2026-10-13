@@ -38,3 +38,9 @@ playwright-report
 blob-report
 .playwright
 apps/desktop/e2e/screenshots
+
+# Local design experiments (not part of the shipped app)
+experimental/
+
+# Python virtual environments
+.venv

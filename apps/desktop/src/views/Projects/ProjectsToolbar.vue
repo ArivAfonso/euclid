@@ -57,6 +57,15 @@
         <Button 
           variant="outline"
           size="sm"
+          @click="$emit('bulk-import')" 
+          class="h-7 px-3 text-xs font-medium"
+        >
+          <Upload class="w-3.5 h-3.5 mr-1" />
+          Import
+        </Button>
+        <Button 
+          variant="outline"
+          size="sm"
           @click="$emit('new-folder')" 
           class="h-7 px-3 text-xs font-medium"
         >
@@ -80,7 +89,7 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { Search, LayoutGrid, List, FolderPlus, Plus, Home, ChevronRight } from 'lucide-vue-next'
+import { Search, LayoutGrid, List, FolderPlus, Plus, Home, ChevronRight, Upload } from 'lucide-vue-next'
 
 defineProps<{
   folderPath: { id: string; name: string }[]
@@ -95,5 +104,6 @@ defineEmits<{
   'update:viewMode': [mode: 'grid' | 'list']
   'new-folder': []
   'new-project': []
+  'bulk-import': []
 }>()
 </script>

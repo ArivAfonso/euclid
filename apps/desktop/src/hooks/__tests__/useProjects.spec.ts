@@ -19,6 +19,11 @@ vi.mock('@/views/Canvas/useCenter', () => ({
   default: () => h.center,
 }))
 
+// Offscreen thumbnail rendering needs a real 2D canvas; the hook only cares
+// that it is handed a template and gets a data URL back.
+const renderTemplateThumbnail = vi.hoisted(() => vi.fn())
+vi.mock('@/utils/templateThumbnail', () => ({ renderTemplateThumbnail }))
+
 // The real store barrel pulls in fabric.js and the full editor runtime — the
 // projects layer only ever needs templates/currentTemplate + a font hook.
 vi.mock('@/store', async () => {
@@ -39,7 +44,7 @@ vi.mock('@/store', async () => {
       },
     ],
     workSpace: { fillType: 0, left: 0, top: 0, angle: 0, scaleX: 1, scaleY: 1, fill: '#ffffff' },
-    zoom: 0.5,
+    zoom: 1,
     width: 1920,
     height: 1080,
   }
@@ -95,7 +100,7 @@ const makeTemplatePayload = (overrides: Record<string, unknown> = {}) => ({
   background: 'rgba(255,255,255,0)',
   objects: [],
   workSpace: { fillType: 0, left: 0, top: 0, angle: 0, scaleX: 1, scaleY: 1, fill: '#ffffff' },
-  zoom: 0.5,
+  zoom: 1,
   width: 1920,
   height: 1080,
   ...overrides,
@@ -119,6 +124,7 @@ describe('hooks/useProjects', () => {
   let canvasMock: ReturnType<typeof makeCanvasMock>
   let api: ReturnType<typeof useProjects>
   const templatesStore = useTemplatesStore() as unknown as {
+    templates: Array<{ width: number; height: number; zoom: number }>
     replaceProjectTemplates: ReturnType<typeof vi.fn>
     renderTemplate: ReturnType<typeof vi.fn>
   }
@@ -159,6 +165,27 @@ describe('hooks/useProjects', () => {
       expect(api.getSavedProjects()).toEqual([])
 
       consoleError.mockRestore()
+    })
+  })
+
+  describe('stored dimensions', () => {
+    it('repairs projects saved with the zoomed template size', () => {
+      // Listed as 540×1220 although the artboard is 1080×2440
+      const template = makeTemplatePayload({
+        width: 540,
+        height: 1220,
+        zoom: 0.5,
+        objects: [{ id: 'WorkSpaceDrawType', type: 'Rect', width: 1080, height: 2440 }],
+      })
+      seedProjects([
+        makeSavedProject({ id: 'zoomed', width: 540, height: 1220, canvasData: [template] as never }),
+        makeSavedProject({ id: 'fine', width: 1920, height: 1080 }),
+      ])
+
+      const projects = api.getSavedProjects()
+
+      expect(projects.find((p) => p.id === 'zoomed')).toMatchObject({ width: 1080, height: 2440 })
+      expect(projects.find((p) => p.id === 'fine')).toMatchObject({ width: 1920, height: 1080 })
     })
   })
 
@@ -205,6 +232,51 @@ describe('hooks/useProjects', () => {
     })
   })
 
+  describe('importProjectsFromTemplates', () => {
+    const draft = (overrides: Record<string, unknown> = {}) => ({
+      name: 'Imported',
+      description: '',
+      width: 1080,
+      height: 1080,
+      template: makeTemplatePayload(),
+      ...overrides,
+    })
+
+    it('creates one project per draft and persists them synchronously', () => {
+      const created = api.importProjectsFromTemplates([
+        draft({ name: 'Poster A', description: 'First' }),
+        draft({ name: 'Poster B', template: makeTemplatePayload({ id: 'template-2' }) }),
+      ] as never)
+
+      expect(created).toHaveLength(2)
+      expect(created[0].id).toBeTruthy()
+      expect(created[1].id).not.toBe(created[0].id)
+      expect(created[0].name).toBe('Poster A')
+      expect(created[0].description).toBe('First')
+      expect(created[0].width).toBe(1080)
+      expect(created[0].thumbnail).toBe('')
+      expect(created[0].canvasData).toHaveLength(1)
+      expect(created[0].folderId).toBeNull()
+
+      // Written through immediately, batch keeps its order
+      const stored = readStoredProjects()
+      expect(stored.map((p) => p.name)).toEqual(['Poster A', 'Poster B'])
+    })
+
+    it('places imported projects in the given folder, in front of existing ones', () => {
+      seedProjects([makeSavedProject({ id: 'existing', name: 'Existing' })])
+
+      const created = api.importProjectsFromTemplates([draft({ name: 'New' })] as never, 'folder-1')
+
+      expect(created[0].folderId).toBe('folder-1')
+      expect(api.getSavedProjects().map((p) => p.name)).toEqual(['New', 'Existing'])
+    })
+
+    it('returns an empty list for empty input', () => {
+      expect(api.importProjectsFromTemplates([])).toEqual([])
+    })
+  })
+
   describe('updateProject', () => {
     it('returns false for an unknown project id', async () => {
       expect(await api.updateProject('missing', { name: 'X' })).toBe(false)
@@ -222,6 +294,67 @@ describe('hooks/useProjects', () => {
       expect(stored.modified).toBeGreaterThanOrEqual(saved.modified)
       // canvasData was re-serialized because none was provided
       expect(canvasMock.toObject).toHaveBeenCalled()
+    })
+
+    it('syncs the listed dimensions with the resized canvas', async () => {
+      const saved = makeSavedProject({ width: 1920, height: 1080 })
+      seedProjects([saved])
+      const template = templatesStore.templates[0]
+      const original = { width: template.width, height: template.height, zoom: template.zoom }
+
+      try {
+        // The user resized the artboard to 1080×2440 in the canvas panel while
+        // zoomed to 50%: the template stores the zoomed size (540×1220).
+        template.width = 540
+        template.height = 1220
+        template.zoom = 0.5
+        canvasMock.toObject.mockReturnValue({
+          version: '6.7.1',
+          objects: [{ id: 'WorkSpaceDrawType', type: 'Rect', width: 1080, height: 2440 }],
+          background: 'rgba(255,255,255,0)',
+        })
+
+        expect(await api.updateProject(saved.id, { name: 'Resized' })).toBe(true)
+
+        const stored = readStoredProjects()[0]
+        expect(stored.width).toBe(1080)
+        expect(stored.height).toBe(2440)
+        expect(api.getProject(saved.id)!.width).toBe(1080)
+      } finally {
+        Object.assign(template, original)
+      }
+    })
+
+    it('derives the size from the zoom when the canvas has no workspace rect', async () => {
+      const saved = makeSavedProject()
+      seedProjects([saved])
+      const template = templatesStore.templates[0]
+      const original = { width: template.width, height: template.height, zoom: template.zoom }
+
+      try {
+        template.width = 540
+        template.height = 1220
+        template.zoom = 0.5
+
+        await api.updateProject(saved.id, { name: 'Resized' })
+
+        const stored = readStoredProjects()[0]
+        expect(stored.width).toBeCloseTo(1080)
+        expect(stored.height).toBeCloseTo(2440)
+      } finally {
+        Object.assign(template, original)
+      }
+    })
+
+    it('lets explicit dimensions in the updates win over the template', async () => {
+      const saved = makeSavedProject()
+      seedProjects([saved])
+
+      await api.updateProject(saved.id, { width: 500, height: 400 })
+
+      const stored = readStoredProjects()[0]
+      expect(stored.width).toBe(500)
+      expect(stored.height).toBe(400)
     })
 
     it('keeps updates working when the canvas is unavailable', async () => {
@@ -406,7 +539,7 @@ describe('hooks/useProjects', () => {
       const [validated] = templatesStore.replaceProjectTemplates.mock.calls[0]
       expect(validated).toHaveLength(1)
       expect(validated[0].version).toBe('6.7.1')
-      expect(validated[0].zoom).toBe(0.5)
+      expect(validated[0].zoom).toBe(1)
 
       expect(canvasMock.discardActiveObject).toHaveBeenCalled()
       expect(canvasMock.clear).toHaveBeenCalled()
@@ -449,6 +582,155 @@ describe('hooks/useProjects', () => {
 
       expect(await api.loadProject('project-1')).toBe(true)
       expect(templatesStore.renderTemplate).toHaveBeenCalled()
+    })
+  })
+
+  describe('generateMissingThumbnails', () => {
+    // The worker remembers which projects it already tried, so every test
+    // uses fresh ids.
+    let seq = 0
+    const uid = (label: string) => `${label}-${++seq}`
+
+    // Thumbnail writes are deferred to an idle callback (setTimeout in jsdom)
+    const flushStorageWrites = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+    beforeEach(() => {
+      renderTemplateThumbnail.mockReset()
+      renderTemplateThumbnail.mockResolvedValue('data:image/jpeg;base64,RENDERED')
+    })
+
+    it('renders and stores thumbnails for projects that have none', async () => {
+      const blank = uid('blank')
+      const done = uid('done')
+      seedProjects([
+        makeSavedProject({ id: blank, thumbnail: '' }),
+        makeSavedProject({ id: done, thumbnail: 'data:image/jpeg;base64,EXISTING' }),
+      ])
+      const onUpdate = vi.fn()
+
+      await api.generateMissingThumbnails(onUpdate)
+
+      expect(renderTemplateThumbnail).toHaveBeenCalledTimes(1)
+      expect(onUpdate).toHaveBeenCalledTimes(1)
+      await flushStorageWrites()
+      const stored = readStoredProjects()
+      expect(stored.find((p) => p.id === blank)!.thumbnail).toBe('data:image/jpeg;base64,RENDERED')
+      expect(stored.find((p) => p.id === done)!.thumbnail).toBe('data:image/jpeg;base64,EXISTING')
+    })
+
+    it('renders from the saved template and keeps modified untouched', async () => {
+      const id = uid('blank')
+      seedProjects([
+        makeSavedProject({
+          id,
+          modified: 1234,
+          canvasData: [makeTemplatePayload({ objects: [], width: 640, height: 480 })] as never,
+        }),
+      ])
+
+      await api.generateMissingThumbnails()
+
+      // The renderer receives the saved template and normalizes it itself
+      const [template] = renderTemplateThumbnail.mock.calls[0]
+      expect(template.objects).toEqual([])
+      expect(template.width).toBe(640)
+      await flushStorageWrites()
+      expect(readStoredProjects().find((p) => p.id === id)!.modified).toBe(1234)
+    })
+
+    it('hands the page a new array so the grid re-renders', async () => {
+      seedProjects([makeSavedProject({ id: uid('blank'), thumbnail: '' })])
+      const before = api.getSavedProjects()
+
+      await api.generateMissingThumbnails()
+
+      expect(api.getSavedProjects()).not.toBe(before)
+    })
+
+    it('leaves a project blank when rendering yields nothing, and does not retry it', async () => {
+      const id = uid('broken')
+      seedProjects([makeSavedProject({ id, thumbnail: '' })])
+      renderTemplateThumbnail.mockResolvedValue('')
+      const onUpdate = vi.fn()
+
+      await api.generateMissingThumbnails(onUpdate)
+      await api.generateMissingThumbnails(onUpdate)
+
+      expect(renderTemplateThumbnail).toHaveBeenCalledTimes(1)
+      expect(onUpdate).not.toHaveBeenCalled()
+      await flushStorageWrites()
+      expect(readStoredProjects().find((p) => p.id === id)!.thumbnail).toBe('')
+    })
+
+    it('keeps going after one project throws', async () => {
+      const bad = uid('bad')
+      const good = uid('good')
+      seedProjects([
+        makeSavedProject({ id: bad, thumbnail: '' }),
+        makeSavedProject({ id: good, thumbnail: '' }),
+      ])
+      renderTemplateThumbnail
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce('data:image/jpeg;base64,GOOD')
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      await api.generateMissingThumbnails()
+
+      await flushStorageWrites()
+      const stored = readStoredProjects()
+      expect(stored.find((p) => p.id === bad)!.thumbnail).toBe('')
+      expect(stored.find((p) => p.id === good)!.thumbnail).toBe('data:image/jpeg;base64,GOOD')
+      consoleError.mockRestore()
+    })
+
+    it('skips projects deleted while their thumbnail was rendering', async () => {
+      const id = uid('gone')
+      seedProjects([makeSavedProject({ id, thumbnail: '' })])
+      renderTemplateThumbnail.mockImplementation(async () => {
+        api.deleteProject(id)
+        return 'data:image/jpeg;base64,RENDERED'
+      })
+
+      await api.generateMissingThumbnails()
+
+      expect(api.getSavedProjects().find((p) => p.id === id)).toBeUndefined()
+    })
+
+    it('shares one worker between concurrent callers', async () => {
+      seedProjects([
+        makeSavedProject({ id: uid('a'), thumbnail: '' }),
+        makeSavedProject({ id: uid('b'), thumbnail: '' }),
+      ])
+      const first = vi.fn()
+      const second = vi.fn()
+
+      await Promise.all([
+        api.generateMissingThumbnails(first),
+        api.generateMissingThumbnails(second),
+      ])
+
+      expect(renderTemplateThumbnail).toHaveBeenCalledTimes(2)
+      expect(first).toHaveBeenCalledTimes(2)
+      expect(second).toHaveBeenCalledTimes(2)
+    })
+
+    it('picks up projects imported while the worker is running', async () => {
+      seedProjects([makeSavedProject({ id: uid('first'), thumbnail: '' })])
+      // A bulk import lands while the first thumbnail is still rendering
+      renderTemplateThumbnail.mockImplementationOnce(async () => {
+        api.importProjectsFromTemplates([
+          { name: 'Late', description: '', width: 100, height: 100, template: makeTemplatePayload() },
+        ] as never)
+        return 'data:image/jpeg;base64,RENDERED'
+      })
+
+      await api.generateMissingThumbnails()
+
+      expect(renderTemplateThumbnail).toHaveBeenCalledTimes(2)
+      await flushStorageWrites()
+      const stored = readStoredProjects()
+      expect(stored).toHaveLength(2)
+      expect(stored.every((p) => p.thumbnail)).toBe(true)
     })
   })
 

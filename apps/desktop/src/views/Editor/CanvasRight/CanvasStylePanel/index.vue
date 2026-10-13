@@ -71,7 +71,7 @@
               v-model="clip"
               @change="changeTemplateClip"
               oninput="value=value.replace(/[^\d]/g,'')"
-              :disabled="unitMode === 1"
+              :disabled="unitMode !== 0"
               class="pl-7 pr-2 text-xs h-7 font-mono border-destructive/20 focus:border-destructive/50"
               placeholder="Bleed"
             />
@@ -120,7 +120,7 @@
               v-model="safe"
               @change="changeTemplateSafe"
               oninput="value=value.replace(/[^\d]/g,'')"
-              :disabled="unitMode === 1"
+              :disabled="unitMode !== 0"
               class="pl-7 pr-2 text-xs h-7 font-mono border-green-500/20 focus:border-green-500/50"
               placeholder="Safety"
             />
@@ -216,7 +216,7 @@ import { Rect } from "fabric";
 import { storeToRefs } from "pinia";
 import { toast } from '@/components/ui/toast/use-toast'
 import { ref, watch, onMounted, computed } from "vue";
-import { mm2px, px2mm } from "@/utils/image";
+import { mm2px, px2unit, unit2px } from "@/utils/image";
 import { useFabricStore, useMainStore, useTemplatesStore } from "@/store";
 import {
   WorkSpaceClipType,
@@ -259,14 +259,14 @@ const templateWidth = computed(() => {
   // const [ canvas ] = useCanvas()
   // if (!canvas) return 0
   const workWidth = currentTemplate.value.width / currentTemplate.value.zoom;
-  return unitMode.value === 0 ? px2mm(workWidth) : workWidth;
+  return px2unit(workWidth, unitMode.value);
 });
 
 const templateHeight = computed(() => {
   // const [ canvas ] = useCanvas()
   // if (!canvas) return 0
   const workHeight = currentTemplate.value.height / currentTemplate.value.zoom;
-  return unitMode.value === 0 ? px2mm(workHeight) : workHeight;
+  return px2unit(workHeight, unitMode.value);
 });
 
 // const canvasWidth = ref<number>(px2mm(currentTemplate.value.width / currentTemplate.value.zoom))
@@ -285,10 +285,8 @@ const gridColorRecent = ref<[string[]]>([[]]);
 
 // Get canvas size
 const getCanvasSize = () => {
-  let width =
-    unitMode.value === 0 ? mm2px(canvasWidth.value) : canvasWidth.value;
-  let height =
-    unitMode.value === 0 ? mm2px(canvasHeight.value) : canvasHeight.value;
+  let width = unit2px(Number(canvasWidth.value), unitMode.value);
+  let height = unit2px(Number(canvasHeight.value), unitMode.value);
   width = width * zoom.value;
   height = height * zoom.value;
   return { width, height };
@@ -405,14 +403,13 @@ const changeWorkRound = (roundStatus: boolean) => {
 const changeUnitMode = async () => {
   const width = currentTemplate.value.width / currentTemplate.value.zoom;
   const heigth = currentTemplate.value.height / currentTemplate.value.zoom;
+  canvasWidth.value = px2unit(width, unitMode.value);
+  canvasHeight.value = px2unit(heigth, unitMode.value);
   if (unitMode.value === 0) {
-    canvasWidth.value = px2mm(width);
-    canvasHeight.value = px2mm(heigth);
     clip.value = 2;
     safe.value = 3;
   } else {
-    canvasWidth.value = width;
-    canvasHeight.value = heigth;
+    // Bleed / safety lines are defined in mm, so they only apply in mm mode
     clip.value = safe.value = 0;
   }
   await changeTemplateClip();

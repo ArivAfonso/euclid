@@ -111,6 +111,7 @@ export const propertiesToInclude = [
   'trRx',
   'blRx',
   'brRx',
+  'cornerRadius',
   'showInExport',
 ]
 

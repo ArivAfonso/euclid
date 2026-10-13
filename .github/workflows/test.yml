@@ -80,6 +80,10 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       - name: Build Electron main + preload and run smoke tests
+        # xvfb-run starts a virtual X server and exports DISPLAY + XAUTHORITY.
+        # Turbo 2 runs tasks in strict environment mode, so XAUTHORITY must be
+        # declared in turbo.json (tasks.test:e2e:electron.passThroughEnv) or it
+        # is filtered out and Electron fails with "Missing X server or $DISPLAY".
         run: xvfb-run --auto-servernum npm run test:e2e:electron
       - name: Upload Playwright report
         if: failure()

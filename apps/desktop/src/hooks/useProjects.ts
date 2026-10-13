@@ -6,7 +6,13 @@ import useCanvas from '@/views/Canvas/useCanvas'
 import useCenter from '@/views/Canvas/useCenter'
 import { propertiesToInclude } from '@/configs/canvas'
 import { Template } from '@/types/canvas'
-import { yieldToPaint } from '@/utils/async'
+import { yieldToMain, yieldToPaint } from '@/utils/async'
+import {
+  getTemplateArtboardSize,
+  normalizeProjectTemplate,
+  type ImportedProjectDraft
+} from '@/utils/projectImport'
+import { renderTemplateThumbnail } from '@/utils/templateThumbnail'
 
 export interface SavedProject {
   id: string
@@ -175,6 +181,33 @@ const loadFontsForTemplates = async (templates: Template[]) => {
 let _projectsCache: SavedProject[] | null = null
 let _projectLoadRequest = 0
 
+// ── Background thumbnail rendering (Projects page) ──
+// One worker at a time, shared by every useProjects() instance. Projects it has
+// already tried are not retried until the next app launch, so a template that
+// can never render does not burn CPU on every visit to the Projects page.
+let _thumbnailJob: Promise<void> | null = null
+const _thumbnailAttempted = new Set<string>()
+const _thumbnailListeners = new Set<() => void>()
+
+// Projects saved before the artboard size was derived properly carry the
+// zoomed template size (a 1080×2440 design listed as 353×798). Re-derive the
+// real size from the saved template whenever projects are read from storage.
+const withArtboardSize = (project: SavedProject): SavedProject => {
+  const template = project?.canvasData?.[0]
+  if (!template) return project
+  const { width, height } = getTemplateArtboardSize(template)
+  if (Math.abs(width - project.width) < 0.5 && Math.abs(height - project.height) < 0.5) {
+    return project
+  }
+  return { ...project, width, height }
+}
+
+const needsThumbnail = (project: SavedProject): boolean =>
+  !project.thumbnail &&
+  Array.isArray(project.canvasData) &&
+  project.canvasData.length > 0 &&
+  !_thumbnailAttempted.has(project.id)
+
 export default () => {
   const templatesStore = useTemplatesStore()
 
@@ -184,7 +217,7 @@ export default () => {
       if (_projectsCache) return _projectsCache
       const stored = localStorage.getItem(PROJECTS_STORAGE_KEY)
       const parsed: SavedProject[] = stored ? JSON.parse(stored) : []
-      _projectsCache = Array.isArray(parsed) ? parsed : []
+      _projectsCache = Array.isArray(parsed) ? parsed.map(withArtboardSize) : []
       return _projectsCache
     } catch (error) {
       console.error('Error loading projects:', error)
@@ -278,7 +311,7 @@ export default () => {
   // Save current project
   const saveProject = async (name: string, description: string = ''): Promise<SavedProject | null> => {
     try {
-      const { templates, currentTemplate } = storeToRefs(templatesStore)
+      const { templates } = storeToRefs(templatesStore)
       const [canvas] = useCanvas()
       
       if (!canvas) {
@@ -326,8 +359,8 @@ export default () => {
         id: nanoid(),
         name,
         description,
-        width: currentTemplate.value.width,
-        height: currentTemplate.value.height,
+        // Real artboard size, not the zoomed template.width (see projectImport)
+        ...getTemplateArtboardSize(canvasData[templatesStore.templateIndex] ?? canvasData[0]),
         thumbnail,
         canvasData,
         created: now,
@@ -388,6 +421,14 @@ export default () => {
           })
           
           updates.canvasData = canvasData
+
+          // The artboard can be resized in the editor — keep the dimensions
+          // listed on the Projects page in sync with the template being saved.
+          const size = getTemplateArtboardSize(
+            canvasData[templatesStore.templateIndex] ?? canvasData[0]
+          )
+          if (updates.width === undefined) updates.width = size.width
+          if (updates.height === undefined) updates.height = size.height
         }
       }
 
@@ -448,48 +489,8 @@ export default () => {
         return false
       }
 
-      // Validate that each template has the required structure
-      const validatedData = project.canvasData.map(template => {
-        // Ensure WorkSpaceDrawType object exists
-        const hasWorkspace = template.objects?.some(obj => obj.id === 'WorkSpaceDrawType')
-        
-        if (!hasWorkspace && template.workSpace) {
-          // Add WorkSpaceDrawType if missing
-          const workspaceObj = {
-            id: 'WorkSpaceDrawType',
-            type: 'Rect',
-            name: 'rect',
-            width: template.width,
-            height: template.height,
-            fill: template.workSpace.fill || '#ffffff',
-            selectable: false,
-            evented: false,
-            ...template.workSpace
-          }
-          
-          template.objects = template.objects || []
-          template.objects.unshift(workspaceObj as any)
-        }
-
-        return {
-          ...template,
-          version: template.version || '6.7.1',
-          objects: template.objects || [],
-          background: template.background || 'rgba(255,255,255,0)',
-          workSpace: template.workSpace || {
-            fillType: 0,
-            left: 0,
-            top: 0,
-            angle: 0,
-            scaleX: 1,
-            scaleY: 1,
-            fill: '#ffffff'
-          },
-          zoom: template.zoom || 1,
-          width: template.width || 1920,
-          height: template.height || 1080
-        }
-      })
+      // Validate/normalize each template (shared with the bulk import flow)
+      const validatedData = project.canvasData.map((template) => normalizeProjectTemplate(template))
 
       // Replace project state before waiting for fonts so the old project's
       // templates cannot be serialized into the new project during loading.
@@ -780,6 +781,96 @@ export default () => {
     }
   }
 
+  // Render thumbnails for every project that has none, one after another,
+  // without opening the editor. `onUpdate` fires after each thumbnail is
+  // stored so the grid can show them as they land. Safe to call repeatedly:
+  // concurrent calls share one worker, which also picks up projects added
+  // (e.g. by a bulk import) while it is running.
+  const generateMissingThumbnails = (onUpdate?: () => void): Promise<void> => {
+    if (onUpdate) _thumbnailListeners.add(onUpdate)
+
+    if (!_thumbnailJob) {
+      const run = async () => {
+        let next: SavedProject | undefined
+        while ((next = getSavedProjects().find(needsThumbnail))) {
+          const target = next
+          _thumbnailAttempted.add(target.id)
+
+          try {
+            const templates = target.canvasData.map((template) => normalizeProjectTemplate(template))
+            // Text is measured when it is hydrated, so fonts have to be ready first
+            await loadFontsForTemplates(templates)
+            // The renderer normalizes on its own; hand it the saved template
+            // so it can tell a real workspace rect from an injected one.
+            const thumbnail = await renderTemplateThumbnail(target.canvasData[0])
+
+            if (thumbnail) {
+              // Re-read: the project may have been deleted or saved from the
+              // editor while this one was rendering.
+              const projects = getSavedProjects()
+              const index = projects.findIndex((p) => p.id === target.id)
+              if (index !== -1 && !projects[index].thumbnail) {
+                // NEW array, not an in-place edit — the Projects page holds a
+                // `ref` to the cached one and would never see a mutation.
+                saveProjectsToStorage(
+                  projects.map((p, i) => (i === index ? { ...p, thumbnail } : p))
+                )
+                _thumbnailListeners.forEach((listener) => listener())
+              }
+            }
+          } catch (error) {
+            console.error('Error generating project thumbnail:', error)
+          }
+
+          // Let the grid paint (and the user interact) between projects. Not
+          // yieldToPaint: rAF never fires while the window is hidden.
+          await yieldToMain()
+        }
+      }
+
+      const job = run().finally(() => {
+        _thumbnailJob = null
+      })
+      _thumbnailJob = job
+    }
+
+    return _thumbnailJob!.finally(() => {
+      if (onUpdate) _thumbnailListeners.delete(onUpdate)
+    })
+  }
+
+  // Bulk import: create one project per parsed template file.
+  // Used by the Projects page — there is no live canvas there, so thumbnails
+  // start empty and are rendered afterwards by generateMissingThumbnails().
+  const importProjectsFromTemplates = (
+    drafts: ImportedProjectDraft[],
+    folderId: string | null = null
+  ): SavedProject[] => {
+    if (!drafts.length) return []
+
+    const projects = getSavedProjects()
+    const now = Date.now()
+    const created: SavedProject[] = drafts.map((draft) => ({
+      id: nanoid(),
+      name: draft.name,
+      description: draft.description,
+      width: draft.width,
+      height: draft.height,
+      thumbnail: '',
+      canvasData: [draft.template],
+      created: now,
+      modified: now,
+      folderId
+    }))
+
+    // NOTE: store a NEW array instead of mutating the cached one in place.
+    // The Projects page holds a `ref` referencing the cached array — mutating
+    // it and re-assigning the same reference never triggers a re-render, so
+    // the grid would keep showing stale data after an import.
+    saveProjectsToStorage([...created, ...projects], true)
+    return created
+  }
+
   return {
     getSavedProjects,
     saveProject,
@@ -789,7 +880,10 @@ export default () => {
     renameProject,
     getProject,
     generateAndSaveThumbnail,
+    generateMissingThumbnails,
     invalidateProjectsCache,
+    // Bulk import (Projects page)
+    importProjectsFromTemplates,
     // Folder-related project operations
     moveProjectToFolder,
     getProjectsInFolder,

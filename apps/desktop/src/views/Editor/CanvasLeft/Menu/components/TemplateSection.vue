@@ -81,6 +81,35 @@
           </div>
         </div>
 
+        <!-- Classic Templates (1080 × 1440, 3:4 portrait) -->
+        <div v-if="portrait1080Templates.length" class="space-y-2 border border-border/50 rounded-md p-2.5 bg-muted/20">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-xs font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wide select-none">
+              <div class="w-1.5 h-1.5 bg-red-600 rounded-sm"></div>
+              Classic
+            </h3>
+            <Badge variant="outline" class="text-[10px] px-1.5 py-0 select-none">{{ portrait1080Templates.length }}</Badge>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              v-for="item in portrait1080Templates"
+              :key="item.id"
+              type="button"
+              class="group relative overflow-hidden rounded-md border border-border bg-muted/30 transition-all hover:border-primary hover:bg-background hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              :style="{ aspectRatio: `${item.width} / ${item.height}` }"
+              @click="requestTemplateChange(item)"
+            >
+              <img
+                :src="item.preview"
+                :alt="item.title"
+                class="h-full w-full object-contain"
+                loading="lazy"
+                @error="(event) => handleImageError(event)">
+            </button>
+          </div>
+        </div>
+
         <!-- Portrait Templates (vertical) -->
         <div v-if="portraitTemplates.length" class="space-y-2 border border-border/50 rounded-md p-2.5 bg-muted/20">
           <div class="flex items-center justify-between mb-1">
@@ -176,6 +205,8 @@ const LOCAL_TEMPLATES: { name: string; width: number; height: number; previewExt
   { name: 'business-book-2', width: 1600, height: 2560 },
   { name: 'business-book', width: 1600, height: 2560 },
   { name: 'car-insurance', width: 1080, height: 1080 },
+  { name: 'clock', width: 1080, height: 1440 },
+  { name: 'cocktail', width: 1080, height: 1440 },
   { name: 'energy-drink', width: 1080, height: 1080 },
   { name: 'ferrari', width: 1600, height: 900 },
   { name: 'fried-chicken', width: 1080, height: 1080, previewExt: 'png' },
@@ -183,9 +214,11 @@ const LOCAL_TEMPLATES: { name: string; width: number; height: number; previewExt
   { name: 'furniture', width: 1080, height: 1080 },
   { name: 'handbag', width: 940, height: 788 },
   { name: 'headphones', width: 1080, height: 1080 },
+  { name: 'ikea', width: 1080, height: 1440 },
   { name: 'insurance', width: 1080, height: 1080 },
   { name: 'jordans', width: 1080, height: 1080, previewExt: 'png' },
   { name: 'lincoln', width: 1600, height: 2560 },
+  { name: 'market', width: 1080, height: 1440 },
   { name: 'mongol-empire', width: 1600, height: 2560 },
   { name: 'nike-shoes-1', width: 1080, height: 1080 },
   { name: 'nike', width: 2000, height: 2000 },
@@ -201,6 +234,7 @@ const LOCAL_TEMPLATES: { name: string; width: number; height: number; previewExt
   { name: 'turntable', width: 940, height: 788, previewExt: 'png' },
   { name: 'water-can', width: 1080, height: 1080, previewExt: 'png' },
   { name: 'wedding', width: 1600, height: 900 },
+  { name: 'wedding-2', width: 1080, height: 1440 },
   { name: 'yoga-book', width: 1600, height: 2560 },
   { name: 'yoga', width: 940, height: 788 },
 ]
@@ -242,9 +276,16 @@ const squareTemplates = computed(() => {
   return filteredTemplates.value.filter((item) => item.width === item.height)
 })
 
-// Portrait templates (height > width)
+// Dedicated Classic section (1080 × 1440) (the newest 3:4 templates)
+const is1080x1440 = (item: LocalTemplateItem) => item.width === 1080 && item.height === 1440
+
+const portrait1080Templates = computed(() => {
+  return filteredTemplates.value.filter(is1080x1440)
+})
+
+// Portrait templates (height > width), excluding those with their own section
 const portraitTemplates = computed(() => {
-  return filteredTemplates.value.filter((item) => item.height > item.width)
+  return filteredTemplates.value.filter((item) => item.height > item.width && !is1080x1440(item))
 })
 
 const handleImageError = (event: Event) => {
